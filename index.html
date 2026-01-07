@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下载中心</title>
+    <style>
+        /* 密码验证层样式 */
+        .lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        .lock-screen h2 {
+            color: #e94560;
+            font-size: 36px;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+        }
+
+        .password-wrap {
+            position: relative;
+            width: 380px;
+        }
+
+        .password-input {
+            width: 100%;
+            height: 60px;
+            padding: 0 20px;
+            font-size: 20px;
+            border: 2px solid #0f3460;
+            border-radius: 10px;
+            background: #16213e;
+            color: white;
+            outline: none;
+            box-shadow: 0 0 15px rgba(15, 52, 96, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .password-input:focus {
+            border-color: #e94560;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .password-input::placeholder {
+            color: #6a7ba2;
+        }
+
+        .unlock-btn {
+            width: 100%;
+            height: 60px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #e94560, #d63353);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .unlock-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .unlock-btn:disabled {
+            background: linear-gradient(135deg, #6a7ba2, #556890);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-tip {
+            color: #ff5252;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+            text-align: center;
+        }
+
+        .attempts-tip {
+            color: #6a7ba2;
+            font-size: 12px;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* 下载中心样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+        }
+
+        .download-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            display: none; /* 初始隐藏 */
+            margin-top: 50px;
+            margin-bottom: 50px;
+        }
+
+        .container-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .container-header h1 {
+            color: #1a1a2e;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .container-header p {
+            color: #666;
+            font-size: 18px;
+        }
+
+        .file-list {
+            margin-bottom: 40px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .file-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-left-color: #e94560;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #0f3460, #1a1a2e);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .file-name {
+            color: #1a1a2e;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0f3460, #1a1a2e);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #154580, #24243e);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #e94560, #d63353);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #f15773, #e04060);
+            transform: translateY(-2px);
+        }
+
+        .batch-download {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .batch-btn {
+            padding: 15px 40px;
+            font-size: 18px;
+        }
+
+        .download-status {
+            margin-left: 15px;
+            color: #28a745;
+            font-size: 16px;
+            display: none;
+        }
+
+        .progress-container {
+            width: 80%;
+            margin: 20px auto 0;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #e94560, #d63353);
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            margin-top: 10px;
+            color: #666;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .password-wrap {
+                width: 90%;
+            }
+
+            .download-container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .file-info {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .download-status {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+
+            .progress-container {
+                width: 100%;
+            }
+        }
+
+        /* 新增：隐藏音频控件 */
+        #background-music {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 新增：音频标签 - 替换为你的音乐链接 -->
+    <audio id="background-music" loop>
+        <!-- 支持 mp3/ogg/wav 格式，优先mp3兼容性最好 -->
+        <source src="0102.mp3" type="audio/mpeg">
+        <source src="https://example.com/your-music.ogg" type="audio/ogg">
+        您的浏览器不支持音频播放
+    </audio>
+
+    <!-- 密码验证层 -->
+    <div class="lock-screen" id="lockScreen">
+        <h2>🔒 安全验证</h2>
+<button onclick="toggleMusic()" style="position:absolute;top:20px;right:20px;color:white;background:#e94560;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;">
+        暂停音乐
+    </button>
+        <div class="password-wrap">
+            <input type="password" class="password-input" id="passwordInput" placeholder="请输入访问密码">
+            <button class="unlock-btn" id="unlockBtn" onclick="verifyPassword()">解锁访问</button>
+            <div class="error-tip" id="errorTip">密码错误，请重新输入！</div>
+            <div class="attempts-tip" id="attemptsTip">剩余尝试次数：2</div>
+ 
+        </div>
+    </div>
+
+    <!-- 下载中心内容 -->
+    <div class="download-container" id="downloadContainer">
+        <div class="container-header">
+            <h1>加密文件下载中心</h1>
+            <p>安全验证通过 - 支持单个/批量下载</p>
+        </div>
+
+        <div class="file-list" id="fileList">
+            <!-- 文件项动态生成 -->
+        </div>
+
+        <div class="batch-download">
+            <button class="btn btn-success batch-btn" onclick="downloadAllFiles()">一键下载所有文件</button>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-text" id="progressText">0/0 文件已下载</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 新增：页面加载后自动播放音乐（适配浏览器策略）
+        window.addEventListener('DOMContentLoaded', async () => {
+            const audio = document.getElementById('background-music');
+            // 浏览器要求自动播放需满足「用户交互/静音」，这里优先尝试播放，失败则静音播放
+            try {
+                await audio.play();
+            } catch (error) {
+                audio.muted = true; // 静音模式下可自动播放
+                await audio.play();
+                console.log('音乐已静音自动播放（浏览器策略限制）');
+            }
+        });
+
+function toggleMusic() {
+    const audio = document.getElementById('background-music');
+    if (audio.paused) {
+        audio.play();
+        event.target.textContent = '暂停音乐';
+    } else {
+        audio.pause();
+        event.target.textContent = '播放音乐';
+    }
+}
+
+        const SecurityModule = (function() {
+            const FINAL_VERIFY_HASH = "d21f1c0dbec981612212c8403973cdbe629572f9";
+            const FIXED_SALT = "a1b2c3d4e5f6g7h8i9j0"; // 固定盐值（可自定义）
+            const MAX_ATTEMPTS = 2; // 最大尝试次数
+            
+            // 2. 哈希工具函数（SHA256 + 加盐）
+            const sha256 = async (str) => {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(str);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            };
+
+            // 3. 多层哈希生成（和验证逻辑一致）
+            const generateFinalHash = async (password) => {
+                // 第一层：密码 + 固定盐
+                const firstHash = await sha256(password + FIXED_SALT);
+                // 第二层：取前32位 + 反转字符串 + 固定盐
+                const secondStr = firstHash.slice(0, 32).split('').reverse().join('') + FIXED_SALT;
+                // 第三层：最终哈希（取前40位）
+                const finalHash = await sha256(secondStr);
+                return finalHash.slice(0, 40);
+            };
+
+            // 4. 验证函数
+            let attemptCount = 0;
+            const verifyPassword = async (inputPwd) => {
+                if (attemptCount >= MAX_ATTEMPTS) return { success: false, locked: true };
+                
+                const inputHash = await generateFinalHash(inputPwd);
+                const isValid = inputHash === FINAL_VERIFY_HASH;
+                
+                if (!isValid) attemptCount++;
+                
+                return {
+                    success: isValid,
+                    remainingAttempts: MAX_ATTEMPTS - attemptCount,
+                    locked: attemptCount >= MAX_ATTEMPTS
+                };
+            };
+
+            // 5. 重置尝试次数
+            const resetAttempts = () => {
+                attemptCount = 0;
+            };
+
+            return {
+                verifyPassword,
+                resetAttempts,
+                MAX_ATTEMPTS
+            };
+        })();
+
+        // ====================== 下载中心功能层 ======================
+        // 文件列表（可自定义）
+        const fileList = [
+            { name: "QQ浏览器", url: "https://pcchannel.imtt.qq.com/channel/QQBrowser_Setup_x64_QB10_10026021.exe" },
+            { name: "东方财富", url: "https://swdlcdn.eastmoney.com/swc8_free_new/dfcft8.exe" },
+            { name: "FTNN", url: "https://softwaredownload.futunn.com/FTNN_desktop_15.45.14418.exe?file_name=FTNN_desktop_15.45.14418_n766ak7aga.exe" },
+            { name: "Microsoft", url: "https://c2rsetup.officeapps.live.com/c2r/downloadEdge.aspx?platform=Default&source=EdgeStablePage&Channel=Stable&language=zh-cn&Consent=1&brand=M100" }
+        ];
+      // ====================== 下载中心功能层 ======================
+        // 批量下载进度
+        let downloadedCount = 0;
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        // ====================== 页面交互层 ======================
+        // 密码验证入口
+        async function verifyPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const errorTip = document.getElementById('errorTip');
+            const unlockBtn = document.getElementById('unlockBtn');
+            const attemptsTip = document.getElementById('attemptsTip');
+            const inputPwd = passwordInput.value.trim();
+
+            // 清空错误提示
+            errorTip.style.display = 'none';
+            
+            // 空值验证
+            if (!inputPwd) {
+                errorTip.textContent = "密码不能为空！";
+                errorTip.style.display = 'block';
+                return;
+            }
+
+            // 执行验证（仅比对哈希，无明文传输）
+            const result = await SecurityModule.verifyPassword(inputPwd);
+            
+            if (result.success) {
+                // 验证通过：隐藏锁层，显示下载中心
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('downloadContainer').style.display = 'block';
+                renderFileList();
+                progressText.textContent = `0/${fileList.length} 文件已下载`;
+            } else {
+                // 验证失败
+                errorTip.style.display = 'block';
+                passwordInput.value = '';
+                attemptsTip.textContent = `剩余尝试次数：${result.remainingAttempts}`;
+
+                // 锁定按钮
+                if (result.locked) {
+                    unlockBtn.disabled = true;
+                    unlockBtn.textContent = "已锁定（2分钟后重试）";
+                    errorTip.textContent = `错误${SecurityModule.MAX_ATTEMPTS}次，页面已锁定！`;
+                    
+                    // 3分钟后解锁（可选）
+                    setTimeout(() => {
+                        SecurityModule.resetAttempts();
+                        unlockBtn.disabled = false;
+                        unlockBtn.textContent = "解锁访问";
+                        attemptsTip.textContent = `剩余尝试次数：${SecurityModule.MAX_ATTEMPTS}`;
+                        errorTip.style.display = 'none';
+                    }, 120000); // 2分钟 = 120000毫秒
+                }
+            }
+        }
+
+        // 监听回车按键
+        document.getElementById('passwordInput').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') await verifyPassword();
+        });
+
+        // 渲染文件列表
+        function renderFileList() {
+            const fileListEl = document.getElementById('fileList');
+            let html = '';
+            
+            fileList.forEach((file, index) => {
+                html += `
+                    <div class="file-item" id="fileItem-${index}">
+                        <div class="file-info">
+                            <div class="file-icon">📄</div>
+                            <div class="file-name">${file.name}</div>
+                            <span class="download-status" id="status-${index}">✓ 下载中...</span>
+                        </div>
+                        <button class="btn btn-primary download-btn" onclick="downloadSingleFile(${index})">
+                            立即下载
+                        </button>
+                    </div>
+                `;
+            });
+            
+            fileListEl.innerHTML = html;
+        }
+
+        // 下载单个文件
+        function downloadSingleFile(index, isBatch = false) {
+            const file = fileList[index];
+            const statusEl = document.getElementById(`status-${index}`);
+            const btnEl = document.querySelector(`#fileItem-${index} .download-btn`);
+            
+            if (!file || !file.url) {
+                alert(`文件【${file.name}】链接无效！`);
+                if (isBatch) updateProgress();
+                return;
+            }
+            
+            try {
+                statusEl.style.display = 'inline';
+                btnEl.disabled = true;
+                btnEl.textContent = '下载中...';
+                
+                const a = document.createElement('a');
+                a.href = file.url;
+                a.download = file.name;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    statusEl.textContent = '✓ 下载完成';
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                        btnEl.disabled = false;
+                        btnEl.textContent = '立即下载';
+                    }, 2000);
+                    
+                    if (isBatch) updateProgress();
+                }, 1000);
+                
+            } catch (error) {
+                alert(`文件【${file.name}】下载失败：${error.message}`);
+                statusEl.style.display = 'none';
+                btnEl.disabled = false;
+                btnEl.textContent = '立即下载';
+                
+                if (isBatch) updateProgress();
+            }
+        }
+
+        // 批量下载
+        function downloadAllFiles() {
+            if (fileList.length === 0) {
+                alert('暂无可下载的文件！');
+                return;
+            }
+            
+            progressContainer.style.display = 'block';
+            downloadedCount = 0;
+            progressBar.style.width = '0%';
+            progressText.textContent = `0/${fileList.length} 文件已下载`;
+            
+            alert(`开始批量下载，共${fileList.length}个文件，请稍候...`);
+            
+            fileList.forEach((file, index) => {
+                setTimeout(() => {
+                    downloadSingleFile(index, true);
+                }, index * 800);
+            });
+        }
+
+        // 更新进度条
+        function updateProgress() {
+            downloadedCount++;
+            const progressPercent = (downloadedCount / fileList.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+            progressText.textContent = `${downloadedCount}/${fileList.length} 文件已下载`;
+            
+            if (downloadedCount >= fileList.length) {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    downloadedCount = 0;
+                }, 2000);
+            }
+        }
+
+        // ====================== 防调试/混淆层（可选）======================
+        (function antiDebug() {
+            // 防控制台调试
+            setInterval(() => {
+                try {
+                    debugger;
+                } catch (e) {}
+            }, 1000);
+
+            // 禁止复制关键代码（可选）
+            document.addEventListener('copy', (e) => {
+                const selection = window.getSelection().toString();
+                if (selection.includes('FINAL_VERIFY_HASH') || selection.includes('generateFinalHash')) {
+                    e.preventDefault();
+                }
+            });
+
+            // 混淆console.log，隐藏敏感信息
+            const originalLog = console.log;
+            console.log = function(...args) {
+                if (args.some(arg => arg && arg.includes && (arg.includes('hash') || arg.includes('password')))) {
+                    return;
+                }
+                originalLog.apply(console, args);
+            };
+        })();
+         async function generateCustomHash(yourPassword) {
+             const encoder = new TextEncoder();
+             const data = encoder.encode(yourPassword + "a1b2c3d4e5f6g7h8i9j0");
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+             const firstHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const secondStr = firstHash.slice(0, 32).split('').reverse().join('') + "a1b2c3d4e5f6g7h8i9j0";
+             const finalBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(secondStr));
+             const finalHash = Array.from(new Uint8Array(finalBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+             console.log("你的最终哈希值：", finalHash.slice(0, 40));
+             return finalHash.slice(0, 40);
+         }
+    </script>
+</body>
+</html>
