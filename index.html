@@ -339,6 +339,9 @@
 
         <div class="batch-download">
             <button class="btn btn-success batch-btn" onclick="downloadAllFiles()">一键下载所有文件</button>
+            <button onclick="toggleMusic()" style="position:absolute;top:20px;right:20px;color:white;background:#e94560;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;">
+        暂停音乐
+    </button>
             <div class="progress-container" id="progressContainer">
                 <div class="progress-bar-bg">
                     <div class="progress-bar" id="progressBar"></div>
@@ -644,4 +647,5 @@ function toggleMusic() {
          }
     </script>
 </body>
+
 </html>
