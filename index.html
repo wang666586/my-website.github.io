@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>WH批量下载</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 密码弹窗遮罩层 */
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'Inter', Roboto, sans-serif;
+        }
+        .password-modal {
+            background: white;
+            border-radius: 2rem;
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+            animation: fadeInUp 0.25s ease;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .password-modal h3 {
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #1f5e7e, #3083a3);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .password-modal p {
+            color: #5c7f94;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .password-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 1px solid #cbdbe0;
+            border-radius: 60px;
+            outline: none;
+            transition: 0.2s;
+            font-family: monospace;
+            margin-bottom: 1rem;
+        }
+        .password-input:focus {
+            border-color: #3083a3;
+            box-shadow: 0 0 0 3px rgba(48,131,163,0.2);
+        }
+        .password-btn {
+            background: #1f6e8c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .password-btn:hover {
+            background: #0d5975;
+        }
+        .error-msg {
+            color: #d9534f;
+            font-size: 0.75rem;
+            margin-top: 10px;
+            min-height: 28px;
+        }
+        /* 主内容默认隐藏 */
+        .main-content {
+            display: none;
+        }
+        .main-content.visible {
+            display: block;
+        }
+        
+        /* ========= 核心UI样式 (增强批量下载提示 + 完全自适应卡片网格) ========= */
+        body {
+            background: #f1f5f9;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 1.2rem 1rem;
+            color: #0f2c3b;
+        }
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.8rem;
+            gap: 1rem;
+            border-bottom: 2px solid #dce3ec;
+            padding-bottom: 0.8rem;
+        }
+        .title-section h1 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1f5e7e, #3083a3);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .title-section p {
+            font-size: 0.75rem;
+            color: #527a90;
+            margin-top: 4px;
+        }
+        .global-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn-download-selected {
+            background: #1f6e8c;
+            border: none;
+            color: white;
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .btn-download-selected:hover {
+            background: #0d5975;
+            transform: translateY(-1px);
+        }
+        .btn-add-group {
+            background: #2c6e49;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-add-group:hover {
+            background: #1f593a;
+        }
+        .selected-count {
+            background: white;
+            padding: 4px 14px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #1f6e8c;
+            border: 1px solid #cbdbe0;
+        }
+        
+        /* ========= 自适应网格布局: 使用 CSS Grid 完全响应式 ========= */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+            gap: 1.5rem;
+            padding: 0.2rem 0.2rem 1.8rem 0.2rem;
+            align-items: start;
+        }
+        
+        /* 中等屏幕适当缩小最小宽度，保证两栏舒服 */
+        @media (max-width: 1000px) {
+            .groups-grid {
+                grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+                gap: 1.3rem;
+            }
+        }
+        
+        /* 平板: 依然两栏，但更灵活 */
+        @media (max-width: 860px) {
+            .groups-grid {
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            }
+        }
+        
+        /* 手机大屏: 单栏满宽 */
+        @media (max-width: 600px) {
+            body {
+                padding: 0.8rem 0.8rem;
+            }
+            .groups-grid {
+                grid-template-columns: 1fr;
+                gap: 1.2rem;
+            }
+            .group-card {
+                width: 100%;
+            }
+            .card-row-url, .card-row-official {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-left: 8px;
+            }
+            .res-url, .res-official {
+                width: 100%;
+                min-width: auto;
+            }
+            .card-left .res-name {
+                width: 110px;
+                font-size: 0.8rem;
+            }
+            .btn-single-download {
+                padding: 4px 12px;
+                font-size: 0.65rem;
+            }
+            .group-title {
+                max-width: 140px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* 卡片本身不需要固定宽度，100%继承父网格 */
+        .group-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+            width: 100%;      /* 关键: 填满网格列 */
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s;
+            border: 1px solid #e9edf2;
+        }
+        .group-card:hover {
+            box-shadow: 0 12px 22px rgba(0, 0, 0, 0.08);
+        }
+        
+        .group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.9rem 1rem 0.6rem 1rem;
+            border-bottom: 1px solid #eff3f8;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .group-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 2;
+            min-width: 140px;
+        }
+        .group-title {
+            font-weight: 700;
+            font-size: 1rem;
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-family: inherit;
+            color: #1f4e6c;
+            transition: 0.1s;
+            max-width: 180px;
+        }
+        .group-title:focus {
+            outline: none;
+            border-color: #8bbdd0;
+            background: #fefefe;
+        }
+        .edit-icon {
+            color: #7c9ab0;
+            font-size: 0.7rem;
+            cursor: pointer;
+            background: #f0f4f9;
+            padding: 4px;
+            border-radius: 30px;
+            width: 24px;
+            text-align: center;
+        }
+        .group-select-all {
+            background: #f0f5fa;
+            border: 1px solid #cfe0e9;
+            border-radius: 32px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #1f6e8c;
+            white-space: nowrap;
+        }
+        .group-select-all:hover {
+            background: #e3eff5;
+        }
+        .btn-delete-group {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #b7c6d2;
+            transition: 0.2s;
+            padding: 5px 8px;
+            border-radius: 30px;
+        }
+        .btn-delete-group:hover {
+            color: #e05a5a;
+            background: #fff0f0;
+        }
+        .cards-container {
+            padding: 1rem 1rem 1rem 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+        .resource-card-item {
+            background: #fafcff;
+            border-radius: 18px;
+            border: 1px solid #eef2f6;
+            transition: 0.1s;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 12px;
+            gap: 8px;
+        }
+        .resource-card-item:hover {
+            background: white;
+            border-color: #cbdae6;
+        }
+        .resource-card-item.selected {
+            background: #e6f4f0;
+            border-color: #68b1c9;
+            box-shadow: 0 0 0 1px #c3e0eb;
+        }
+        .card-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .card-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 2;
+            min-width: 150px;
+        }
+        .checkbox-select {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #1f6e8c;
+            flex-shrink: 0;
+        }
+        .res-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1c3f53;
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-family: inherit;
+            width: 140px;
+        }
+        .res-name:focus {
+            outline: none;
+            border-color: #aac9db;
+            background: white;
+        }
+        .card-buttons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .btn-single-download {
+            background: #3083a3;
+            color: white;
+            text-decoration: none;
+            padding: 5px 14px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.1s;
+            white-space: nowrap;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-single-download:hover {
+            background: #1e6580;
+        }
+        .btn-remove-card {
+            background: transparent;
+            border: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: #b1c3d1;
+            padding: 4px 6px;
+            border-radius: 30px;
+            transition: 0.1s;
+        }
+        .btn-remove-card:hover {
+            color: #dc6b6b;
+            background: #fff0f0;
+        }
+        .card-row-url, .card-row-official {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: 28px;
+        }
+        .url-label, .official-label {
+            font-size: 0.65rem;
+            color: #6f95ad;
+            background: #eef2f6;
+            padding: 2px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .res-url, .res-official {
+            font-size: 0.7rem;
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 28px;
+            color: #2c6e8f;
+            flex: 1;
+            min-width: 180px;
+            border: 1px solid #e2e8f0;
+        }
+        .res-url:focus, .res-official:focus {
+            background: white;
+            outline: 1px solid #8bbdd0;
+        }
+        .btn-official-link {
+            background: #5f7f96;
+            color: white;
+            text-decoration: none;
+            padding: 5px 12px;
+            border-radius: 40px;
+            font-size: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: 0.1s;
+            white-space: nowrap;
+        }
+        .btn-official-link:hover {
+            background: #3c5c73;
+        }
+        .add-card-btn {
+            margin-top: 8px;
+            background: #f0f5fa;
+            border: 1px dashed #bdd3e2;
+            border-radius: 40px;
+            padding: 6px;
+            font-size: 0.7rem;
+            color: #1f6e8c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: 0.1s;
+            width: 100%;
+        }
+        .add-card-btn:hover {
+            background: #e6f0f5;
+        }
+        .empty-cards {
+            text-align: center;
+            color: #9bb4c4;
+            font-size: 0.7rem;
+            padding: 1rem;
+        }
+        .footer-tip {
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            text-align: center;
+            color: #7e9aae;
+            border-top: 1px solid #dee4ec;
+            padding-top: 1rem;
+        }
+        /* 新增联系模块样式 (两个p标签 + 一键复制) */
+        .contact-links {
+            margin-top: 1rem;
+            background: #f8fafd;
+            border-radius: 28px;
+            padding: 1rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid #e3eaf1;
+            transition: all 0.2s;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 60px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            border: 1px solid #eef2f6;
+        }
+        .contact-text {
+            font-size: 0.85rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: #1f4e6c;
+            background: #f1f5f9;
+            padding: 6px 14px;
+            border-radius: 40px;
+            word-break: break-all;
+            flex: 1;
+            text-align: left;
+            letter-spacing: 0.2px;
+        }
+        .copy-btn {
+            background: #eef3f9;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #1f6e8c;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.15s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .copy-btn:hover {
+            background: #dce6f0;
+            color: #0a506b;
+            transform: scale(0.97);
+        }
+        .copy-btn:active {
+            background: #cbdae6;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2c38e6;
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            z-index: 11000;
+            font-weight: 500;
+            pointer-events: none;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        @media (max-width: 500px) {
+            .toast-msg {
+                white-space: normal;
+                max-width: 85%;
+                text-align: center;
+                font-size: 0.7rem;
+            }
+            .card-row-url, .card-row-official {
+                margin-left: 0px;
+            }
+            .group-header {
+                flex-wrap: wrap;
+            }
+            .contact-item {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+                gap: 8px;
+                padding: 12px;
+            }
+            .contact-text {
+                text-align: center;
+                font-size: 0.75rem;
+            }
+        }
+        .download-link-helper {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 密码验证遮罩层 -->
+<div id="passwordOverlay" class="password-overlay">
+    <div class="password-modal">
+        <h3>🔐 安全访问</h3>
+        <p>请输入访问密码以继续</p>
+        <input type="password" id="passwordInput" class="password-input" placeholder="输入密码" autofocus>
+        <button id="submitPasswordBtn" class="password-btn">验证并进入</button>
+        <div id="pwdErrorMsg" class="error-msg"></div>
+    </div>
+</div>
+
+<!-- 主内容区域 -->
+<div id="mainContent" class="main-content">
+    <div class="app-container">
+        <div class="header-bar">
+            <div class="title-section">
+                <h1>下载中心</h1>
+                <p>wh</p>
+            </div>
+            <div class="global-actions">
+                <span class="selected-count" id="selectedCountBadge">已选 0 项</span>
+                <button class="btn-download-selected" id="batchDownloadBtn">📥 一键下载(选中)</button>
+                <button class="btn-add-group" id="addGroupBtn">➕ 新建分组</button>
+            </div>
+        </div>
+
+        <div class="groups-grid" id="groupsContainer"></div>
+        
+        <!-- 原有的footer-tip: 保留原始订阅地址 -->
+        <div class="footer-tip">
+            @wh
+        </div>
+        
+        <!-- ========= 新增两个p标签 + 一键复制功能 ========= -->
+        <div class="contact-links">
+            <div class="contact-item" id="contactItem1">
+                <span class="contact-text" id="contactText1">https://dp3.config-sync.com/api/v1/client/subscribe?token=b2b7d6c076173801be40003aa8d2c9fb</span>
+                <button class="copy-btn" data-copy-target="contactText1">(op)一键复制</button>
+            </div>
+            <div class="contact-item" id="contactItem2">
+                <span class="contact-text" id="contactText2">https://liangxin.xyz/api/v1/liangxin?OwO=cf96aafdc9d92c8aa3649b11046276c6</span>
+                <button class="copy-btn" data-copy-target="contactText2">良心云 一键复制</button>
+            </div>
+        </div>
+<script>
+    (function() {
+        const CORRECT_PASSWORD_HASH = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+        let isAuthenticated = false;
+        
+        const overlay = document.getElementById('passwordOverlay');
+        const mainContentDiv = document.getElementById('mainContent');
+        const passwordInput = document.getElementById('passwordInput');
+        const submitBtn = document.getElementById('submitPasswordBtn');
+        const errorMsgSpan = document.getElementById('pwdErrorMsg');
+        
+        async function hashPassword(plainText) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plainText);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        async function verifyAndUnlock() {
+            const enteredPwd = passwordInput.value;
+            if (!enteredPwd) {
+                errorMsgSpan.innerText = '❌ 请输入密码';
+                return;
+            }
+            errorMsgSpan.innerText = '⏳ 验证中...';
+            try {
+                const hashedEntered = await hashPassword(enteredPwd);
+                if (hashedEntered === CORRECT_PASSWORD_HASH) {
+                    isAuthenticated = true;
+                    overlay.style.display = 'none';
+                    mainContentDiv.classList.add('visible');
+                    if (typeof initApp === 'function') initApp();
+                    // 初始化复制功能（两个p标签 + 联系模块）
+                    initCopyFeatures();
+                } else {
+                    errorMsgSpan.innerText = '❌ 密码错误，拒绝访问';
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsgSpan.innerText = '❌ 验证出错，请重试';
+            }
+        }
+        
+        passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyAndUnlock(); });
+        submitBtn.addEventListener('click', verifyAndUnlock);
+        
+        // ========= 核心数据模型 =========
+        let groupsData = [
+            {
+                id: "grp_1",
+                title: "常用下载",
+                cards: [
+                    { id: "c1", name: "QQ浏览器", url: "https://pcchannel.imtt.qq.com/channel/QQBrowser_Setup_x64_QB10_10026021.exe", officialUrl: "https://browser.qq.com/" },
+                    { id: "c2", name: "雷霆模拟器", url: "https://lddl01.ldmnq.com/downloader/ldplayerinst14.exe?n=ldplayer14_ld_407592_ld.exe", officialUrl: "https://www.ldmnq.com/" },
+                    { id: "c4", name: "网易UU远程", url: "https://a56.gdl.netease.com/UURemote_Setup_4.27.1.8336_0604184433_gwqd.exe?key1=fad2b28ce1d69ac163baee967fad6137&key2=6a229743&n=uuyc_4.27.1.exe", officialUrl: "https://uuyc.163.com/" }
+                ]
+            },
+            {
+                id: "grp_2",
+                title: "浏览器",
+                cards: [
+                     { id: "c5", name: "谷歌浏览器", url: "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7B9A46330D-B9BD-069D-8C50-6AE432A28C38%7D%26lang%3Den-GB%26browser%3D4%26usagestats%3D1%26appname%3DGoogle%2520Chrome%26needsadmin%3Dprefers%26ap%3Dx64-statsdef_1%26installdataindex%3Dempty/update2/installers/ChromeSetup.exe", officialUrl: "https://www.google.cn/intl/zh-CN/chrome/" },
+                    { id: "c6", name: "Microsoft Edge", url: "https://c2rsetup.officeapps.live.com/c2r/downloadEdge.aspx?platform=Default&source=EdgeStablePage&Channel=Stable&language=zh-cn&Consent=1&brand=M100", officialUrl: "https://www.microsoft.com/zh-cn/edge/download?form=MA13FJ" },
+                    { id: "c7", name: "dns.bat", url: "DNS.bat", officialUrl: "无" }
+                ]
+            },
+            {
+                id: "grp_3",
+                title: "理财软件",
+                cards: [
+                   { id: "c8", name: "同花顺", url: "https://sp.thsi.cn/staticS3/mobileweb-upload-static-server.file/app_6/downloadcenter/THS_v9.50.90_20260417.exe", officialUrl: "https://www.10jqka.com.cn/" },
+                    { id: "c9", name: "富途牛牛", url: "https://softwaredownload.futustatic.com/FTNN_desktop_16.18.16308.exe?file_name=FTNN_desktop_16.18.16308_n766ak7aga.exe", officialUrl: "https://www.futunn.com/?lang=zh-cn" }
+                ]
+            },
+       {
+                id: "grp_4",
+                title: "工具",
+                cards: [
+                   { id: "c10", name: "阿里云盘", url: "https://cdn.aliyundrive.net/downloads/apps/desktop/aDrive-6.9.1.exe?spm=aliyundrive.sign.0.0.540c1011gghpYK&file=aDrive-6.9.1.exe", officialUrl: "https://www.alipan.com/" },
+                    { id: "c11", name: "WINRAR", url: "https://www.winrar.com.cn/download/winrarcn-1.4.0sc.exe", officialUrl: "https://www.winrar.com.cn/" },
+                    { id: "c11", name: "Google Chrome", url: "ChromeSetup.exe", officialUrl: "无" }
+                ]
+            },
+ {
+                id: "grp_5",
+                title: "OP",
+                cards: [
+                    { id: "c12", name: "v2rayN", url: "https://xn--9kqz23b19z.com/apps/v2rayN/v2rayN-windows-64.zip ", officialUrl: "https://xn--9kqz23b19z.com/#/login" },
+                    { id: "c13", name: "Clash Verge", url: "https://release-assets.githubusercontent.com/github-production-release-asset/721767116/f30e4628-b2ba-4325-ac43-e16a019b43a0?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-06-05T05%3A49%3A52Z&rscd=attachment%3B+filename%3DClash.Verge_2.5.1_x64-setup.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-06-05T04%3A49%3A36Z&ske=2026-06-05T05%3A49%3A52Z&sks=b&skv=2018-11-09&sig=5%2Bbu5lLVRY6IpRDRmRUe6q%2F0iAVquS1v60ot5PoJ9zA%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc4MDYzNjc3NiwibmJmIjoxNzgwNjM0OTc2LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.9AzbMWFAUmPBc0XIN57yWCWCYFqENIlz9GIvOaizD-4&response-content-disposition=attachment%3B%20filename%3DClash.Verge_2.5.1_x64-setup.exe&response-content-type=application%2Foctet-stream", officialUrl: "https://xn--1-q07a56pdss.org/#/dashboard" }
+                ]
+            },
+        ];
+        
+        let selectedCardsMap = new Map();
+        
+        function extractFileNameFromUrl(url, fallbackName) {
+            if (!url || url === "#") return fallbackName;
+            try {
+                let urlObj;
+                try {
+                    urlObj = new URL(url);
+                } catch(e) {
+                    let pathPart = url.split('?')[0].split('#')[0];
+                    let segments = pathPart.split('/');
+                    let lastSegment = segments.pop() || fallbackName;
+                    if (lastSegment.includes('.')) return decodeURIComponent(lastSegment);
+                    return fallbackName;
+                }
+                let pathname = urlObj.pathname;
+                let filename = pathname.split('/').pop();
+                if (!filename || filename === "") return fallbackName;
+                filename = filename.split('?')[0];
+                if (filename.includes('.')) {
+                    return decodeURIComponent(filename);
+                } else {
+                    return decodeURIComponent(filename) || fallbackName;
+                }
+            } catch (err) {
+                return fallbackName;
+            }
+        }
+        
+        function downloadWithAnchorTag(url, suggestedName) {
+            if (!url || url === "#") {
+                showToast(`⚠️ 无效链接: ${suggestedName}`);
+                return;
+            }
+            const finalFilename = extractFileNameFromUrl(url, suggestedName);
+            showToast(`📄 正在下载: ${finalFilename} (若未开始请检查弹窗拦截)`, 3000);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            document.body.appendChild(anchor);
+            anchor.click();
+            setTimeout(() => {
+                if (anchor.parentNode) anchor.parentNode.removeChild(anchor);
+            }, 100);
+        }
+        
+        function showToast(msg, duration = 2800) {
+            let existingToast = document.querySelector('.toast-msg');
+            if (existingToast) existingToast.remove();
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => { if(toast && toast.remove) toast.remove(); }, duration);
+        }
+        
+        function batchDownloadSelected() {
+            const selectedEntries = Array.from(selectedCardsMap.entries()).filter(([, selected]) => selected === true);
+            if (selectedEntries.length === 0) {
+                alert("未选中任何资源，请勾选卡片或使用分组的「全选本组」按钮。");
+                return;
+            }
+            const downloadItems = [];
+            for (const [cardId] of selectedEntries) {
+                for (const group of groupsData) {
+                    const foundCard = group.cards.find(c => c.id === cardId);
+                    if (foundCard && foundCard.url && foundCard.url !== "#") {
+                        downloadItems.push({ name: foundCard.name, url: foundCard.url });
+                        break;
+                    }
+                }
+            }
+            if (downloadItems.length === 0) {
+                alert("所选资源无有效下载链接");
+                return;
+            }
+            let fileListPreview = downloadItems.map((item, idx) => {
+                let extracted = extractFileNameFromUrl(item.url, item.name);
+                return `${idx+1}. ${item.name} → ${extracted}`;
+            }).join("\n");
+            if (confirm(`即将打开 ${downloadItems.length} 个下载链接:\n${fileListPreview}\n\n⚠️ 请确保浏览器允许弹出窗口，是否继续？`)) {
+                downloadItems.forEach((item, index) => {
+                    setTimeout(() => { downloadWithAnchorTag(item.url, item.name); }, index * 180);
+                });
+                showToast(`📦 已触发 ${downloadItems.length} 个下载任务`, 4000);
+            }
+        }
+        
+        function updateSelectedCountUI() {
+            const count = Array.from(selectedCardsMap.values()).filter(v => v === true).length;
+            const badge = document.getElementById("selectedCountBadge");
+            if (badge) badge.innerText = `已选 ${count} 项`;
+        }
+        
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem("dynamic_groups_v6", JSON.stringify(groupsData));
+            } catch(e) { console.warn(e); }
+        }
+        
+        function rebuildSelectedMap() {
+            const newMap = new Map();
+            groupsData.forEach(group => {
+                group.cards.forEach(card => {
+                    newMap.set(card.id, selectedCardsMap.has(card.id) ? selectedCardsMap.get(card.id) : false);
+                });
+            });
+            selectedCardsMap = newMap;
+            updateSelectedCountUI();
+        }
+        
+        function toggleSelectGroup(groupId, isSelectAll) {
+            const group = groupsData.find(g => g.id === groupId);
+            if (!group) return;
+            group.cards.forEach(card => { selectedCardsMap.set(card.id, isSelectAll); });
+            syncAllCheckboxStates();
+            updateSelectedCountUI();
+        }
+        
+        function syncAllCheckboxStates() {
+            document.querySelectorAll('.resource-card-item').forEach(cardDiv => {
+                const cardId = cardDiv.getAttribute('data-card-id');
+                if (cardId && selectedCardsMap.has(cardId)) {
+                    const isChecked = selectedCardsMap.get(cardId);
+                    const checkbox = cardDiv.querySelector('.checkbox-select');
+                    if (checkbox) checkbox.checked = isChecked;
+                    if (isChecked) cardDiv.classList.add('selected');
+                    else cardDiv.classList.remove('selected');
+                }
+            });
+            groupsData.forEach(group => {
+                const groupCardElem = document.querySelector(`.group-card[data-group-id="${group.id}"]`);
+                if (groupCardElem) {
+                    const selectAllBtn = groupCardElem.querySelector('.group-select-all');
+                    if (selectAllBtn && group.cards.length > 0) {
+                        const allSelected = group.cards.every(card => selectedCardsMap.get(card.id) === true);
+                        selectAllBtn.innerHTML = allSelected ? '✅ 取消全选' : '☑️ 全选本组';
+                        selectAllBtn.style.background = allSelected ? "#e0f0e8" : "#f0f5fa";
+                    } else if (selectAllBtn && group.cards.length === 0) {
+                        selectAllBtn.innerHTML = '📭 无卡片';
+                        selectAllBtn.style.opacity = "0.5";
+                    }
+                }
+            });
+        }
+        
+        function onCardCheckboxChange(cardId, checked, cardElement) {
+            selectedCardsMap.set(cardId, checked);
+            if (checked) cardElement.classList.add('selected');
+            else cardElement.classList.remove('selected');
+            updateSelectedCountUI();
+            const groupId = cardElement.closest('.group-card')?.getAttribute('data-group-id');
+            if (groupId) {
+                const group = groupsData.find(g => g.id === groupId);
+                if (group) {
+                    const groupCardElem = document.querySelector(`.group-card[data-group-id="${groupId}"]`);
+                    if (groupCardElem) {
+                        const selectAllBtn = groupCardElem.querySelector('.group-select-all');
+                        if (selectAllBtn && group.cards.length) {
+                            const allSelected = group.cards.every(card => selectedCardsMap.get(card.id) === true);
+                            selectAllBtn.innerHTML = allSelected ? '✅ 取消全选' : '☑️ 全选本组';
+                            selectAllBtn.style.background = allSelected ? "#e0f0e8" : "#f0f5fa";
+                        }
+                    }
+                }
+            }
+        }
+        
+        function renderAllGroups() {
+            const container = document.getElementById("groupsContainer");
+            if (!container) return;
+            container.innerHTML = "";
+            if (groupsData.length === 0) {
+                const emptyMsg = document.createElement("div");
+                emptyMsg.style.background = "#fff9eb";
+                emptyMsg.style.borderRadius = "28px";
+                emptyMsg.style.padding = "2rem";
+                emptyMsg.style.textAlign = "center";
+                emptyMsg.innerHTML = "✨ 暂无分组，点击「新建分组」开始整理资源";
+                container.appendChild(emptyMsg);
+                return;
+            }
+            groupsData.forEach(group => {
+                const groupCard = createGroupElement(group);
+                container.appendChild(groupCard);
+            });
+            rebuildSelectedMap();
+            syncAllCheckboxStates();
+        }
+        
+        function createGroupElement(group) {
+            const groupDiv = document.createElement("div");
+            groupDiv.className = "group-card";
+            groupDiv.setAttribute("data-group-id", group.id);
+        
+            const headerDiv = document.createElement("div");
+            headerDiv.className = "group-header";
+            const titleWrapper = document.createElement("div");
+            titleWrapper.className = "group-title-wrapper";
+            const titleInput = document.createElement("input");
+            titleInput.type = "text";
+            titleInput.value = group.title;
+            titleInput.className = "group-title";
+            titleInput.maxLength = 28;
+            titleInput.addEventListener("blur", (e) => {
+                let newVal = e.target.value.trim();
+                if (newVal) group.title = newVal;
+                else group.title = "未命名分组";
+                titleInput.value = group.title;
+                saveToLocalStorage();
+                renderAllGroups();
+            });
+            titleInput.addEventListener("keypress", (e) => { if (e.key === "Enter") titleInput.blur(); });
+            const editIcon = document.createElement("span");
+            editIcon.innerHTML = "✏️";
+            editIcon.className = "edit-icon";
+            editIcon.addEventListener("click", () => { titleInput.focus(); titleInput.select(); });
+            titleWrapper.appendChild(titleInput);
+            titleWrapper.appendChild(editIcon);
+        
+            const selectAllBtn = document.createElement("button");
+            selectAllBtn.className = "group-select-all";
+            selectAllBtn.innerHTML = group.cards.length ? "☑️ 全选本组" : "📭 无卡片";
+            if (!group.cards.length) selectAllBtn.style.opacity = "0.5";
+            selectAllBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (!group.cards.length) return;
+                const allSelected = group.cards.every(card => selectedCardsMap.get(card.id) === true);
+                toggleSelectGroup(group.id, !allSelected);
+                syncAllCheckboxStates();
+            });
+        
+            const deleteGroupBtn = document.createElement("button");
+            deleteGroupBtn.innerHTML = "🗑️";
+            deleteGroupBtn.className = "btn-delete-group";
+            deleteGroupBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (confirm(`确定删除分组「${group.title}」及其所有资源吗？`)) {
+                    const idx = groupsData.findIndex(g => g.id === group.id);
+                    if (idx !== -1) {
+                        group.cards.forEach(card => selectedCardsMap.delete(card.id));
+                        groupsData.splice(idx, 1);
+                        renderAllGroups();
+                        saveToLocalStorage();
+                    }
+                }
+            });
+            headerDiv.appendChild(titleWrapper);
+            headerDiv.appendChild(selectAllBtn);
+            headerDiv.appendChild(deleteGroupBtn);
+        
+            const cardsContainer = document.createElement("div");
+            cardsContainer.className = "cards-container";
+            function refreshCardsContainer() {
+                cardsContainer.innerHTML = "";
+                if (!group.cards.length) {
+                    const emptyDiv = document.createElement("div");
+                    emptyDiv.className = "empty-cards";
+                    emptyDiv.innerText = "暂无资源，点击下方添加 ➕";
+                    cardsContainer.appendChild(emptyDiv);
+                } else {
+                    group.cards.forEach(card => {
+                        const cardElement = createCardElement(card, group.id);
+                        cardsContainer.appendChild(cardElement);
+                    });
+                }
+                const addBtn = document.createElement("button");
+                addBtn.className = "add-card-btn";
+                addBtn.innerHTML = "+ 添加新资源";
+                addBtn.addEventListener("click", () => {
+                    const newCardId = "card_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+                    const newCard = { id: newCardId, name: "新资源", url: "https://example.com/download", officialUrl: "https://example.com" };
+                    group.cards.push(newCard);
+                    selectedCardsMap.set(newCardId, false);
+                    refreshCardsContainer();
+                    saveToLocalStorage();
+                    rebuildSelectedMap();
+                    syncAllCheckboxStates();
+                });
+                cardsContainer.appendChild(addBtn);
+            }
+            refreshCardsContainer();
+            groupDiv.appendChild(headerDiv);
+            groupDiv.appendChild(cardsContainer);
+            return groupDiv;
+        }
+        
+        function createCardElement(card, groupId) {
+            const cardDiv = document.createElement("div");
+            cardDiv.className = "resource-card-item";
+            cardDiv.setAttribute("data-card-id", card.id);
+            const rowTop = document.createElement("div");
+            rowTop.className = "card-row-top";
+            const leftDiv = document.createElement("div");
+            leftDiv.className = "card-left";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "checkbox-select";
+            checkbox.checked = selectedCardsMap.get(card.id) || false;
+            if (checkbox.checked) cardDiv.classList.add("selected");
+            checkbox.addEventListener("change", (e) => onCardCheckboxChange(card.id, e.target.checked, cardDiv));
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.value = card.name;
+            nameInput.className = "res-name";
+            nameInput.addEventListener("blur", () => { card.name = nameInput.value.trim() || "未命名"; nameInput.value = card.name; saveToLocalStorage(); });
+            nameInput.addEventListener("keypress", (e) => { if (e.key === "Enter") nameInput.blur(); });
+            leftDiv.appendChild(checkbox);
+            leftDiv.appendChild(nameInput);
+            const btnGroup = document.createElement("div");
+            btnGroup.className = "card-buttons";
+            const downloadBtn = document.createElement("button");
+            downloadBtn.className = "btn-single-download";
+            downloadBtn.innerHTML = "⬇️ 下载";
+            downloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadWithAnchorTag(card.url, card.name); });
+            const removeBtn = document.createElement("button");
+            removeBtn.innerHTML = "🗑️";
+            removeBtn.className = "btn-remove-card";
+            removeBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const group = groupsData.find(g => g.id === groupId);
+                if (group) {
+                    const idx = group.cards.findIndex(c => c.id === card.id);
+                    if (idx !== -1) { group.cards.splice(idx, 1); selectedCardsMap.delete(card.id); renderAllGroups(); saveToLocalStorage(); }
+                }
+            });
+            btnGroup.appendChild(downloadBtn);
+            btnGroup.appendChild(removeBtn);
+            rowTop.appendChild(leftDiv);
+            rowTop.appendChild(btnGroup);
+            const rowUrl = document.createElement("div");
+            rowUrl.className = "card-row-url";
+            rowUrl.innerHTML = `<span class="url-label">📥 下载地址</span><input type="text" class="res-url" value="${escapeHtml(card.url)}" placeholder="下载链接">`;
+            const urlInput = rowUrl.querySelector('.res-url');
+            urlInput.addEventListener("blur", () => { card.url = urlInput.value.trim() || "#"; saveToLocalStorage(); });
+            const rowOfficial = document.createElement("div");
+            rowOfficial.className = "card-row-official";
+            rowOfficial.innerHTML = `<span class="official-label">🌐 官网地址</span><input type="text" class="res-official" value="${escapeHtml(card.officialUrl || '')}" placeholder="官网链接"><a class="btn-official-link" href="${escapeHtml(card.officialUrl || '#')}" target="_blank">访问官网 ↗</a>`;
+            const officialInput = rowOfficial.querySelector('.res-official');
+            const officialLink = rowOfficial.querySelector('.btn-official-link');
+            officialInput.addEventListener("blur", () => { let val = officialInput.value.trim(); if(val && !val.startsWith('http')) val = 'https://'+val; card.officialUrl = val || ''; officialLink.href = card.officialUrl || '#'; saveToLocalStorage(); });
+            cardDiv.appendChild(rowTop);
+            cardDiv.appendChild(rowUrl);
+            cardDiv.appendChild(rowOfficial);
+            return cardDiv;
+        }
+        
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        
+        function addNewGroup() {
+            const newGroupId = "grp_"+Date.now()+"_"+Math.random().toString(36).substring(2,5);
+            const newCardId = "card_"+Date.now();
+            groupsData.push({ id: newGroupId, title: "新分组", cards: [{ id: newCardId, name: "示例资源", url: "https://example.com/download", officialUrl: "https://example.com" }] });
+            groupsData[groupsData.length-1].cards.forEach(c => selectedCardsMap.set(c.id, false));
+            renderAllGroups();
+            saveToLocalStorage();
+        }
+        
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem("dynamic_groups_v6");
+            if (stored) {
+                try { let parsed = JSON.parse(stored); if(Array.isArray(parsed)) groupsData = parsed;
+                groupsData.forEach(g => { if(!g.id) g.id = "grp_"+Math.random(); g.cards.forEach(c => { if(!c.id) c.id="card_"+Math.random(); if(c.officialUrl===undefined) c.officialUrl=""; }); });
+                } catch(e) {}
+            }
+            selectedCardsMap.clear();
+            groupsData.forEach(g => g.cards.forEach(c => selectedCardsMap.set(c.id, false)));
+            renderAllGroups();
+        }
+        
+        // 新增强化复制功能: 支持两个p标签 与 contact模块
+        function initCopyFeatures() {
+            // 针对 contact-links 内按钮
+            document.querySelectorAll('.copy-btn[data-copy-target]').forEach(btn => {
+                btn.removeEventListener('click', handleCopyClick);
+                btn.addEventListener('click', handleCopyClick);
+            });
+            // 针对纯p标签的复制按钮
+            document.querySelectorAll('.copy-p-btn').forEach(btn => {
+                btn.removeEventListener('click', handlePCopy);
+                btn.addEventListener('click', handlePCopy);
+            });
+        }
+        
+        function handleCopyClick(e) {
+            const targetId = e.currentTarget.getAttribute('data-copy-target');
+            const sourceSpan = document.getElementById(targetId);
+            if (sourceSpan) {
+                let textToCopy = sourceSpan.innerText.trim();
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast(`✅ 已复制: ${textToCopy.substring(0, 40)}`, 1600);
+                }).catch(() => alert("手动复制失败"));
+            }
+        }
+        
+        function handlePCopy(e) {
+            const pId = e.currentTarget.getAttribute('data-pid');
+            const pElement = document.getElementById(pId);
+            if (pElement) {
+                let rawText = pElement.innerText.replace('📋 复制', '').trim();
+                navigator.clipboard.writeText(rawText).then(() => {
+                    showToast(`📋 复制成功: ${rawText.substring(0, 45)}`, 1500);
+                }).catch(() => alert("无法复制"));
+            }
+        }
+        
+        window.initApp = function() {
+            loadFromLocalStorage();
+            document.getElementById("addGroupBtn")?.addEventListener("click", addNewGroup);
+            document.getElementById("batchDownloadBtn")?.addEventListener("click", batchDownloadSelected);
+            initCopyFeatures();
+        };
+    })();
+</script>
+</body>
+</html>
