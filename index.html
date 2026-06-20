@@ -673,14 +673,7 @@
 
 <script>
     (function() {
-        // ======================= 密码与记住密码功能 =======================
-        // 新密码: 564952  → SHA-256 哈希值 (提前计算)
         const CORRECT_PASSWORD_HASH = "b4a5f7a9d3e2c1f8a0d4e6f7b3c5d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d".toUpperCase(); 
-        // 实际使用 564952 的SHA256: 通过下面hashPassword('564952') 得到 9f2b9d3e... 但为了确保正确，我们直接在初始化时计算并存储
-        // 由于异步，我们使用硬编码正确值：先计算一次 '564952' 的sha256
-        // 手动预计算： 564952 的sha256 = "0b4e7a0e5b84f4b6a9c8d3e2f1a0b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1" (示例)
-        // 真实值我们通过代码在第一次加载时计算并覆盖，但为了可靠，先预置一个占位，随后在验证时动态比较
-        // 更稳健：在验证函数中动态计算，避免硬编码错误
         let CORRECT_HASH_DYNAMIC = null;
         
         let isAuthenticated = false;
