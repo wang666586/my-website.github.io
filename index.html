@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>拍照搜题</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+        body { background: #f5f7fb; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 12px; }
+        .app-card { max-width: 480px; width: 100%; background: #ffffff; border-radius: 28px; box-shadow: 0 12px 30px rgba(0,0,0,0.05); padding: 20px 16px 28px; margin: 0 auto; }
+        h1 { font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+        h1 i { color: #3b82f6; font-size: 24px; }
+        .subhead { color: #475569; font-size: 13px; margin-bottom: 18px; padding-left: 12px; border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 0 12px 12px 0; line-height: 1.3; padding: 6px 12px; }
+        .upload-area { background: #f8fafc; border-radius: 20px; padding: 16px 12px; border: 1px dashed #d1d9e8; margin-bottom: 16px; text-align: center; }
+        .upload-area i { font-size: 34px; color: #3b82f6; opacity: 0.7; margin-bottom: 4px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 8px 0 4px; }
+        .upload-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #3b82f6; color: white; font-weight: 500; padding: 10px 18px; border-radius: 60px; font-size: 15px; box-shadow: 0 4px 12px rgba(59,130,246,0.2); cursor: pointer; border: none; flex: 1; min-width: 80px; }
+        .upload-btn:active { transform: scale(0.96); }
+        .upload-btn-outline { background: #eef2f6; color: #1e293b; box-shadow: none; }
+        .upload-btn-outline i { color: #1e293b; }
+        #file-input, #camera-input, #excel-input { display: none; }
+        .file-name { font-size: 13px; color: #475569; margin-top: 8px; background: #ffffff; padding: 4px 14px; border-radius: 30px; display: inline-block; border: 1px solid #e9edf4; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .image-preview {
+            margin-top: 12px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            border: 1px solid #e2e8f0;
+        }
+        .image-preview img { max-width: 100%; max-height: 200px; display: block; }
+        .action-row { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+        .btn { flex: 1; min-width: 70px; border: none; background: #eef2f6; padding: 12px 8px; border-radius: 60px; font-weight: 600; font-size: 14px; color: #1e293b; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; }
+        .btn-primary { background: #3b82f6; color: white; box-shadow: 0 6px 14px rgba(59,130,246,0.25); }
+        .btn-primary:active { transform: scale(0.96); }
+        .btn-success { background: #10b981; color: white; box-shadow: 0 6px 14px rgba(16,185,129,0.25); }
+        .btn-outline { background: transparent; border: 1.5px solid #d1d9e8; }
+        .btn-outline:active { background: #f1f5f9; }
+        .btn i { font-size: 16px; }
+        .custom-section { background: #f9faff; border-radius: 18px; padding: 12px 14px; margin: 10px 0; border: 1px solid #e9edf4; }
+        .custom-section label { font-weight: 600; color: #1e293b; font-size: 14px; display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+        .custom-section label i { color: #3b82f6; }
+        .custom-textarea { width: 100%; padding: 12px 14px; border-radius: 18px; border: 1.5px solid #dbe0ea; background: white; font-size: 14px; resize: vertical; min-height: 60px; transition: 0.2s; color: #0f172a; }
+        .custom-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+        .result-box { background: #f1f5f9; border-radius: 20px; padding: 14px 16px; margin-top: 14px; border-left: 4px solid #3b82f6; }
+        .result-box .label { font-size: 13px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+        .result-box .label i { color: #3b82f6; }
+        .status-badge { display: inline-block; font-size: 12px; padding: 2px 12px; border-radius: 30px; background: #e9edf4; color: #334155; }
+        .ocr-selector { display: flex; gap: 6px; align-items: center; margin: 6px 0 10px; flex-wrap: wrap; }
+        .ocr-selector label { font-size: 13px; color: #475569; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+        .ocr-selector input[type="radio"] { accent-color: #3b82f6; width: 14px; height: 14px; }
+        .auto-answer-badge { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 30px; background: #dbeafe; color: #1e4a8a; margin-left: 6px; }
+        .answer-display { background: #ecfdf5; border-radius: 14px; padding: 12px 14px; border-left: 4px solid #10b981; margin-top: 4px; }
+        .answer-display .answer-label { font-size: 13px; font-weight: 600; color: #065f46; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .answer-display .answer-label i { font-size: 16px; }
+        .answer-display .answer-text { font-size: 17px; font-weight: 600; color: #0f172a; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .placeholder-text { color: #94a3b8; font-style: italic; padding: 6px 0; }
+        .hidden { display: none !important; }
+        .engine-tip { font-size: 11px; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+        .retry-hint { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 12px; margin-top: 6px; font-size: 13px; color: #92400e; }
+        .clean-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 30px; background: #dbeafe; color: #1e4a8a; margin-left: 6px; }
+        .excel-section { background: #f0f4ff; border-radius: 14px; padding: 10px 14px; margin: 6px 0 2px; border: 1px solid #dbeafe; }
+        .excel-section .excel-label { font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+        .excel-section .excel-label i { color: #8b5cf6; }
+        .excel-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .excel-btns .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 40px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+        .btn-sm-excel-import { background: #8b5cf6; color: white; }
+        .btn-sm-excel-export { background: #10b981; color: white; }
+        .btn-sm-excel-export-all { background: #3b82f6; color: white; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 999; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; max-width: 90%; }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #065f46; }
+        .toast.error { background: #991b1b; }
+        .toast.info { background: #1e4a8a; }
+        .stats-badge { font-size: 11px; color: #64748b; background: #f1f5f9; padding: 2px 10px; border-radius: 30px; margin-left: 6px; }
+        .btn-sm:active { transform: scale(0.95); }
+        .upload-btn, .btn, .btn-sm { touch-action: manipulation; }
+        @media (max-width: 400px) {
+            .app-card { padding: 16px 12px; }
+            .btn { font-size: 13px; padding: 10px 6px; }
+            .upload-btn { font-size: 14px; padding: 8px 14px; }
+            .custom-textarea { font-size: 13px; }
+            .answer-display .answer-text { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-card">
+    <h1><i class="fas fa-camera-retro"></i> 拍照搜题</h1>
+
+    <!-- 拍照/上传 -->
+    <div class="upload-area">
+        <i class="fas fa-image"></i>
+        <div class="btn-group">
+            <label for="camera-input" class="upload-btn"><i class="fas fa-camera"></i> 拍照</label>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+            <label for="file-input" class="upload-btn upload-btn-outline"><i class="fas fa-folder-open"></i> 相册</label>
+            <input type="file" id="file-input" accept="image/*" style="display:none;">
+        </div>
+        <div id="file-name-display" class="file-name">未选择文件</div>
+        <div id="image-preview-container" class="image-preview">
+            <span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>
+        </div>
+    </div>
+
+    <!-- OCR 引擎选择 -->
+    <div class="ocr-selector">
+        <span style="font-size:13px; color:#475569; font-weight:500;">识别引擎：</span>
+        <label><input type="radio" name="ocr-engine" value="youdao" checked> 有道</label>
+        <label><input type="radio" name="ocr-engine" value="ocrspace"> OCR.space</label>
+        <label><input type="radio" name="ocr-engine" value="tesseract"> Tesseract.js</label>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="action-row">
+        <button class="btn btn-primary" id="recognize-btn"><i class="fas fa-search"></i> 识别</button>
+        <button class="btn btn-success" id="solve-btn"><i class="fas fa-brain"></i> 解答</button>
+        <button class="btn btn-outline" id="clear-btn"><i class="fas fa-undo-alt"></i> 清空</button>
+    </div>
+
+    <!-- Excel 导入导出 -->
+    <div class="excel-section">
+        <div class="excel-label"><i class="fas fa-file-excel"></i> 📊 题库管理 <span class="stats-badge" id="stats-badge">0 条</span></div>
+        <div class="excel-btns">
+            <label for="excel-input" class="btn-sm btn-sm-excel-import"><i class="fas fa-upload"></i> 导入</label>
+            <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
+            <button class="btn-sm btn-sm-excel-export" id="export-selected-btn"><i class="fas fa-download"></i> 导出全部</button>
+            <button class="btn-sm btn-sm-excel-export-all" id="export-template-btn"><i class="fas fa-file-alt"></i> 模板</button>
+        </div>
+    </div>
+
+    <!-- 自定义题目 -->
+    <div class="custom-section">
+        <label for="custom-text">
+            <i class="fas fa-pen-fancy"></i> 
+            题目 (可编辑)
+            <span class="clean-badge"></span>
+        </label>
+        <textarea id="custom-text" class="custom-textarea" placeholder="输入或修改题目"></textarea>
+    </div>
+
+    <!-- 结果区域 -->
+    <div class="result-box">
+        <div class="label">
+            <i class="fas fa-file-alt"></i> 
+            识别结果 
+            <span class="status-badge" id="status-badge">等待</span>
+        </div>
+        <div id="placeholder-content" class="placeholder-text">
+            <i class="fas fa-lightbulb"></i> 识别后自动提取题型及题目
+        </div>
+        <div id="answer-display" class="answer-display hidden">
+            <div class="answer-label">
+                <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                答案
+            </div>
+            <div id="answer-text" class="answer-text"></div>
+            <div id="retry-hint" class="retry-hint hidden">
+                <i class="fas fa-lightbulb"></i>
+                <span id="retry-message"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+(function() {
+    // ---------- 有道智云 OCR 密钥 ----------
+    const APP_KEY = '4e31d1ed9eb03607';
+    const APP_SECRET = 'N7dGcr2X6sPlDCoPbsGBNnzJo6rAK25x';
+    const YOUDAO_URL = 'https://openapi.youdao.com/ocr_general';
+    const OCRSPACE_API_KEY = 'K89168494188957';
+
+    // DOM
+    const fileInput = document.getElementById('file-input');
+    const cameraInput = document.getElementById('camera-input');
+    const excelInput = document.getElementById('excel-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const previewContainer = document.getElementById('image-preview-container');
+    const recognizeBtn = document.getElementById('recognize-btn');
+    const solveBtn = document.getElementById('solve-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const exportSelectedBtn = document.getElementById('export-selected-btn');
+    const exportTemplateBtn = document.getElementById('export-template-btn');
+    const customText = document.getElementById('custom-text');
+    const placeholderContent = document.getElementById('placeholder-content');
+    const answerDisplay = document.getElementById('answer-display');
+    const answerText = document.getElementById('answer-text');
+    const statusBadge = document.getElementById('status-badge');
+    const retryHint = document.getElementById('retry-hint');
+    const retryMessage = document.getElementById('retry-message');
+    const statsBadge = document.getElementById('stats-badge');
+    const toast = document.getElementById('toast');
+    const ocrRadios = document.querySelectorAll('input[name="ocr-engine"]');
+
+    let currentFile = null;
+    let currentQuestion = '';
+
+    // ---------- 题型关键词（用于截取） ----------
+    const TYPE_KEYWORDS = [
+        '判断题', '单选题', '多选题', '单项选择题', '多项选择题',
+        '本市考题', '本市', '本地考题', '填空题', '简答题', '问答题',
+        '论述题', '计算题', '选择题', '是非题'
+    ];
+
+    // ---------- 动态题库 ----------
+    let knowledgeBase = [
+    ];
+
+    function updateStats() {
+        let total = 0;
+        knowledgeBase.forEach(item => total += item.keywords.length);
+        statsBadge.textContent = total + ' 条';
+    }
+    updateStats();
+
+    // Toast
+    let toastTimer = null;
+    function showToast(message, type = 'info', duration = 2500) {
+        toast.textContent = message;
+        toast.className = 'toast ' + type;
+        setTimeout(() => toast.classList.add('show'), 10);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ---------- 核心：去除干扰符号，保留题目和选项 ----------
+    function cleanAndExtract(text) {
+        if (!text || text.trim().length === 0) return null;
+        
+        let content = text.trim();
+        
+        // 1. 查找题型关键词的位置，从题型开始截取
+        let bestIndex = -1;
+        let bestKeyword = '';
+        for (let keyword of TYPE_KEYWORDS) {
+            const index = content.indexOf(keyword);
+            if (index !== -1 && (bestIndex === -1 || index < bestIndex)) {
+                bestIndex = index;
+                bestKeyword = keyword;
+            }
+        }
+        if (bestIndex !== -1) {
+            content = content.substring(bestIndex);
+        }
+        
+        // 2. 清理题型后面的多余括号：如 "判断题）" → "判断题"
+        for (let keyword of TYPE_KEYWORDS) {
+            const regex = new RegExp(keyword + '\\s*[)）]', 'g');
+            content = content.replace(regex, keyword);
+        }
+        
+        // 3. 识别选项并裁剪多余内容
+        const optionPatterns = [
+            { letter: 'A', patterns: [/[（(]?A[.、)）]?\s*/, /A[.、)）]\s*/, /[（(]A[)）]/, /A\s+/] },
+            { letter: 'B', patterns: [/[（(]?B[.、)）]?\s*/, /B[.、)）]\s*/, /[（(]B[)）]/, /B\s+/] },
+            { letter: 'C', patterns: [/[（(]?C[.、)）]?\s*/, /C[.、)）]\s*/, /[（(]C[)）]/, /C\s+/] },
+            { letter: 'D', patterns: [/[（(]?D[.、)）]?\s*/, /D[.、)）]\s*/, /[（(]D[)）]/, /D\s+/] },
+        ];
+
+        let optionPositions = {};
+        for (let opt of optionPatterns) {
+            for (let pattern of opt.patterns) {
+                const match = content.match(pattern);
+                if (match) {
+                    const idx = content.indexOf(match[0]);
+                    if (idx !== -1) {
+                        if (!optionPositions[opt.letter] || idx < optionPositions[opt.letter]) {
+                            optionPositions[opt.letter] = idx;
+                        }
+                    }
+                }
+            }
+        }
+
+        const foundLetters = Object.keys(optionPositions).sort();
+        const optionCount = foundLetters.length;
+
+        if (optionCount >= 2) {
+            const lastLetter = foundLetters[foundLetters.length - 1];
+            const lastPos = optionPositions[lastLetter];
+            
+            let endPos = content.length;
+            
+            const afterLast = content.substring(lastPos);
+            const newlineMatch = afterLast.match(/\n/);
+            if (newlineMatch) {
+                const newlineIdx = lastPos + newlineMatch.index;
+                const restAfterNewline = content.substring(newlineIdx + 1).trim();
+                if (restAfterNewline && !restAfterNewline.match(/^[0-9]+\s*\/\s*[0-9]+/)) {
+                    endPos = newlineIdx;
+                }
+            }
+            
+            const separators = ['收藏', '上一题', '下一题', '份设置', '设置', '答题', '背题', '宫对', '笞错', '答题卡'];
+            for (let sep of separators) {
+                const sepIdx = content.indexOf(sep, lastPos);
+                if (sepIdx !== -1 && sepIdx < endPos) {
+                    endPos = sepIdx;
+                }
+            }
+            
+            content = content.substring(0, endPos).trim();
+        }
+
+        let cleaned = content;
+        
+        cleaned = cleaned.replace(/[（(]\s*([A-D])\s*[)）]?\s*/g, '$1');
+        cleaned = cleaned.replace(/([A-D])\s*[)）]/g, '$1');
+        cleaned = cleaned.replace(/\s+/g, ' ');
+        cleaned = cleaned.replace(/^[（(]/, '');
+        cleaned = cleaned.replace(/[）)]$/, '');
+        cleaned = cleaned.replace(/([A-D])([^\s。，、？?！!])/g, '$1 $2');
+        
+        for (let keyword of TYPE_KEYWORDS) {
+            const regex = new RegExp(keyword + '\\s*[)）]', 'g');
+            cleaned = cleaned.replace(regex, keyword);
+        }
+        
+        return {
+            fullText: cleaned,
+            type: bestKeyword || '',
+            content: cleaned,
+            optionCount: optionCount,
+            foundLetters: foundLetters
+        };
+    }
+
+    function updateStatus(text, type = 'info') {
+        statusBadge.innerText = text;
+        const styles = {
+            loading: { bg: '#dbeafe', color: '#1e4a8a' },
+            success: { bg: '#dcfce7', color: '#166534' },
+            error: { bg: '#fee2e2', color: '#991b1b' },
+            info: { bg: '#e9edf4', color: '#334155' }
+        };
+        const s = styles[type] || styles.info;
+        statusBadge.style.background = s.bg;
+        statusBadge.style.color = s.color;
+    }
+
+    function showAnswer(answer) {
+        placeholderContent.classList.add('hidden');
+        answerDisplay.classList.remove('hidden');
+        answerText.textContent = answer;
+        retryHint.classList.add('hidden');
+        updateStatus('已解答', 'success');
+    }
+
+    function showError(errorMsg, showRetrySuggestion = false) {
+        placeholderContent.classList.add('hidden');
+        answerDisplay.classList.remove('hidden');
+        answerText.textContent = '❌ ' + errorMsg;
+        answerText.style.color = '#b91c1c';
+        if (showRetrySuggestion) {
+            retryHint.classList.remove('hidden');
+            retryMessage.textContent = '💡 建议切换到其他引擎重试，或手动输入题目。';
+        } else {
+            retryHint.classList.add('hidden');
+        }
+        updateStatus('识别失败', 'error');
+    }
+
+    function resetAll() {
+        currentFile = null;
+        currentQuestion = '';
+        fileInput.value = '';
+        cameraInput.value = '';
+        fileNameDisplay.innerText = '未选择文件';
+        previewContainer.innerHTML = `<span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>`;
+        placeholderContent.classList.remove('hidden');
+        answerDisplay.classList.add('hidden');
+        answerText.textContent = '';
+        answerText.style.color = '';
+        retryHint.classList.add('hidden');
+        customText.value = '';
+        updateStatus('等待', 'info');
+    }
+
+    function showPreview(file) {
+        if (!file) {
+            previewContainer.innerHTML = `<span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>`;
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.innerHTML = `<img src="${e.target.result}" alt="预览图片" style="max-width:100%; max-height:200px; border-radius:10px;">`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleFileSelect(file) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('请选择图片文件');
+            return;
+        }
+        currentFile = file;
+        fileNameDisplay.innerText = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+        showPreview(file);
+        updateStatus('已选图片', 'info');
+        placeholderContent.classList.remove('hidden');
+        answerDisplay.classList.add('hidden');
+        retryHint.classList.add('hidden');
+    }
+
+    function smartTextSolve(ocrText) {
+        const extracted = cleanAndExtract(ocrText);
+        if (!extracted) {
+            return { answer: null, question: ocrText.trim(), type: '' };
+        }
+        
+        const questionText = extracted.content;
+        const questionType = extracted.type;
+        
+        const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+        
+        if (!cleanQuestion || cleanQuestion.length < 2) {
+            return { answer: null, question: questionText, type: questionType };
+        }
+
+        const sortedEntries = [];
+        for (let item of knowledgeBase) {
+            for (let keyword of item.keywords) {
+                const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (normKeyword) {
+                    sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                }
+            }
+        }
+        sortedEntries.sort((a, b) => b.length - a.length);
+
+        let matchedAnswer = null;
+
+        for (let entry of sortedEntries) {
+            if (cleanQuestion === entry.keyword) {
+                matchedAnswer = entry.item.answer;
+                break;
+            }
+        }
+        if (!matchedAnswer) {
+            for (let entry of sortedEntries) {
+                if (cleanQuestion.includes(entry.keyword)) {
+                    matchedAnswer = entry.item.answer;
+                    break;
+                }
+            }
+        }
+        if (!matchedAnswer) {
+            let core = cleanQuestion;
+            for (let kw of TYPE_KEYWORDS) {
+                core = core.replace(kw, '');
+            }
+            core = core.trim();
+            if (core && core.length > 3) {
+                for (let entry of sortedEntries) {
+                    if (core.includes(entry.keyword) || entry.keyword.includes(core.substring(0, 8))) {
+                        matchedAnswer = entry.item.answer;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return {
+            answer: matchedAnswer,
+            question: questionText,
+            type: questionType,
+            cleanQuestion: cleanQuestion
+        };
+    }
+
+    function autoSolveAndShow(ocrText) {
+        const rawText = ocrText.trim();
+        if (!rawText) {
+            showError('未能识别到有效题目');
+            return;
+        }
+
+        const result = smartTextSolve(rawText);
+        const questionText = result ? result.question : rawText;
+        const cleanQuestion = result ? result.cleanQuestion : rawText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+
+        if (!cleanQuestion || cleanQuestion.length < 2) {
+            showError('未能识别到有效题目');
+            return;
+        }
+
+        currentQuestion = questionText;
+        customText.value = questionText;
+
+        let answer = result ? result.answer : null;
+        if (!answer) {
+            answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+        }
+
+        showAnswer(answer);
+    }
+
+    function handleSolve() {
+        const q = customText.value.trim();
+        if (!q) { alert('请先输入或识别题目'); return; }
+        
+        const extracted = cleanAndExtract(q);
+        const questionText = extracted ? extracted.content : q;
+        const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+        
+        if (!cleanQuestion) {
+            showError('未能识别到有效题目');
+            return;
+        }
+        
+        currentQuestion = questionText;
+        
+        let answer = null;
+        const sortedEntries = [];
+        for (let item of knowledgeBase) {
+            for (let keyword of item.keywords) {
+                const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (normKeyword) {
+                    sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                }
+            }
+        }
+        sortedEntries.sort((a, b) => b.length - a.length);
+        
+        for (let entry of sortedEntries) {
+            if (cleanQuestion === entry.keyword || cleanQuestion.includes(entry.keyword)) {
+                answer = entry.item.answer;
+                break;
+            }
+        }
+        
+        if (!answer) {
+            answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+        }
+        
+        showAnswer(answer);
+    }
+
+    // ========== Excel 导入导出 ==========
+    function exportAllToExcel() {
+        try {
+            const data = [];
+            knowledgeBase.forEach(item => {
+                item.keywords.forEach(keyword => {
+                    data.push({ '关键词': keyword, '答案': item.answer });
+                });
+            });
+            if (data.length === 0) { showToast('题库为空', 'error'); return; }
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [{ wch: 60 }, { wch: 40 }];
+            XLSX.utils.book_append_sheet(wb, ws, '题库');
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '题库_' + new Date().toISOString().slice(0,10) + '.xlsx';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('✅ 导出成功！共 ' + data.length + ' 条', 'success');
+        } catch(e) {
+            showToast('❌ 导出失败', 'error');
+        }
+    }
+
+    function exportTemplate() {
+        try {
+            const data = [{ '关键词': '示例题目1', '答案': '示例答案1' }, { '关键词': '示例题目2|备选', '答案': '示例答案2' }];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [{ wch: 40 }, { wch: 30 }];
+            XLSX.utils.book_append_sheet(wb, ws, '模板');
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '题库导入模板.xlsx';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('✅ 模板已下载', 'success');
+        } catch(e) {
+            showToast('❌ 下载失败', 'error');
+        }
+    }
+
+    function importFromExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                if (!jsonData || jsonData.length === 0) { showToast('❌ Excel为空或格式不对', 'error'); return; }
+                const headers = Object.keys(jsonData[0]);
+                let keywordCol = null, answerCol = null;
+                for (let h of headers) {
+                    const lower = h.toLowerCase();
+                    if (lower.includes('关键词') || lower.includes('题目') || lower.includes('keyword') || lower.includes('question')) keywordCol = h;
+                    if (lower.includes('答案') || lower.includes('回答') || lower.includes('answer')) answerCol = h;
+                }
+                if (!keywordCol || !answerCol) { showToast('❌ 未找到"关键词"和"答案"列', 'error'); return; }
+
+                const newItems = [];
+                jsonData.forEach(row => {
+                    const keywordRaw = String(row[keywordCol] || '').trim();
+                    const answerRaw = String(row[answerCol] || '').trim();
+                    if (keywordRaw && answerRaw) {
+                        const keywords = keywordRaw.split('|').map(k => k.trim()).filter(k => k);
+                        if (keywords.length) newItems.push({ keywords, answer: answerRaw });
+                    }
+                });
+                if (newItems.length === 0) { showToast('❌ 未识别到有效数据', 'error'); return; }
+
+                let addedCount = 0;
+                newItems.forEach(newItem => {
+                    let exists = false;
+                    for (let existing of knowledgeBase) {
+                        if (existing.keywords.length === newItem.keywords.length &&
+                            existing.keywords.every(k => newItem.keywords.includes(k)) &&
+                            existing.answer === newItem.answer) {
+                            exists = true; break;
+                        }
+                    }
+                    if (!exists) {
+                        knowledgeBase.push(newItem);
+                        addedCount += newItem.keywords.length;
+                    }
+                });
+                updateStats();
+                showToast(`✅ 导入成功！新增 ${addedCount} 条`, 'success');
+            } catch(err) {
+                showToast('❌ 导入失败: ' + err.message, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ========== OCR ==========
+    async function ocrYoudao(imageFile) {
+        const base64Image = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+            reader.readAsDataURL(imageFile);
+        });
+        const salt = Date.now().toString();
+        const curtime = Math.floor(Date.now() / 1000).toString();
+        const signStr = APP_KEY + base64Image + salt + curtime + APP_SECRET;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(signStr);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const formData = new FormData();
+        formData.append('img', base64Image);
+        formData.append('langType', 'zh-en');
+        formData.append('detectType', '10012');
+        formData.append('imageType', '1');
+        formData.append('docType', 'json');
+        formData.append('appKey', APP_KEY);
+        formData.append('salt', salt);
+        formData.append('curtime', curtime);
+        formData.append('signType', 'v3');
+        formData.append('sign', sign);
+
+        const response = await fetch(YOUDAO_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.errorCode === '0' && result.Result?.regions) {
+            const lines = [];
+            result.Result.regions.forEach(region => {
+                region.lines?.forEach(line => {
+                    if (line.words?.length > 0) {
+                        const wordText = line.words.map(w => w.word).join('');
+                        if (wordText.trim()) lines.push(wordText.trim());
+                    }
+                });
+            });
+            return lines.join('\n');
+        }
+        throw new Error(result.msg || `有道错误码: ${result.errorCode}`);
+    }
+
+    async function ocrOcrspace(imageFile) {
+        try {
+            const base64Image = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.readAsDataURL(imageFile);
+            });
+            const formData = new FormData();
+            formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
+            formData.append('apikey', OCRSPACE_API_KEY);
+            formData.append('language', 'chs');
+            formData.append('OCREngine', '2');
+
+            const response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.OCRExitCode === 1 && result.ParsedResults?.length > 0) {
+                const text = result.ParsedResults[0].ParsedText || '';
+                if (text.trim()) return text.trim();
+                throw new Error('未识别到文字');
+            }
+            if (result.ErrorMessage && result.ErrorMessage.includes('limit')) throw new Error('OCR.space 今日免费次数已用完');
+            throw new Error(result.ErrorMessage || 'OCR.space识别失败');
+        } catch (error) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                throw new Error('OCR.space 服务暂时不可用');
+            }
+            throw error;
+        }
+    }
+
+    async function ocrTesseract(imageFile) {
+        if (typeof Tesseract === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        const imageUrl = URL.createObjectURL(imageFile);
+        try {
+            const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng', {
+                logger: (m) => { if (m.status === 'recognizing text') updateStatus('识别中...', 'loading'); }
+            });
+            URL.revokeObjectURL(imageUrl);
+            const text = result.data.text.trim();
+            if (!text) throw new Error('未识别到文字');
+            return text;
+        } catch(e) {
+            URL.revokeObjectURL(imageUrl);
+            throw new Error('Tesseract识别失败: ' + e.message);
+        }
+    }
+
+    async function recognizeImage() {
+        if (!currentFile) {
+            const val = customText.value.trim();
+            if (val) {
+                const extracted = cleanAndExtract(val);
+                const questionText = extracted ? extracted.content : val;
+                const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (!cleanQuestion) {
+                    showError('未能识别到有效题目');
+                    return;
+                }
+                currentQuestion = questionText;
+                let answer = null;
+                const sortedEntries = [];
+                for (let item of knowledgeBase) {
+                    for (let keyword of item.keywords) {
+                        const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                        if (normKeyword) {
+                            sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                        }
+                    }
+                }
+                sortedEntries.sort((a, b) => b.length - a.length);
+                for (let entry of sortedEntries) {
+                    if (cleanQuestion === entry.keyword || cleanQuestion.includes(entry.keyword)) {
+                        answer = entry.item.answer;
+                        break;
+                    }
+                }
+                if (!answer) {
+                    answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+                }
+                showAnswer(answer);
+                return;
+            }
+            alert('请先拍照/选择图片，或输入题目');
+            return;
+        }
+
+        let engine = 'youdao';
+        for (let radio of ocrRadios) if (radio.checked) engine = radio.value;
+
+        updateStatus('识别中...', 'loading');
+
+        try {
+            let text = '';
+            const fileCopy = currentFile;
+            if (engine === 'youdao') text = await ocrYoudao(fileCopy);
+            else if (engine === 'ocrspace') text = await ocrOcrspace(fileCopy);
+            else if (engine === 'tesseract') text = await ocrTesseract(fileCopy);
+
+            if (!text || text.length < 2) {
+                if (engine === 'ocrspace') showError('未识别到文字，可能已达调用上限', true);
+                else showError('未识别到文字，请尝试更清晰的图片');
+                return;
+            }
+            
+            autoSolveAndShow(text);
+            
+        } catch (error) {
+            console.error('识别错误:', error);
+            let msg = error.message || '识别失败';
+            if (engine === 'ocrspace' && (msg.includes('limit') || msg.includes('不可用'))) showError(msg, true);
+            else if (engine === 'youdao' && msg.includes('错误码')) showError(msg + ' 💡 建议切换到「Tesseract.js」', true);
+            else showError(msg, false);
+        }
+    }
+
+    // ---------- 事件绑定 ----------
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) handleFileSelect(file);
+        else resetAll();
+    });
+
+    cameraInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) handleFileSelect(file);
+        else resetAll();
+    });
+
+    excelInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) importFromExcel(file);
+        excelInput.value = '';
+    });
+
+    recognizeBtn.addEventListener('click', recognizeImage);
+    solveBtn.addEventListener('click', handleSolve);
+    clearBtn.addEventListener('click', resetAll);
+    exportSelectedBtn.addEventListener('click', exportAllToExcel);
+    exportTemplateBtn.addEventListener('click', exportTemplate);
+
+    // 初始化
+    resetAll();
+    updateStats();
+    console.log('✅ 拍照搜题已启动 (智能去符号)');
+    console.log('📚 内置知识库条目数:', knowledgeBase.reduce((acc, item) => acc + item.keywords.length, 0));
+})();
+</script>
+</body>
+</html>
