@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>拍照搜题</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+        body { background: #f5f7fb; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 12px; }
+        .app-card { max-width: 480px; width: 100%; background: #ffffff; border-radius: 28px; box-shadow: 0 12px 30px rgba(0,0,0,0.05); padding: 20px 16px 28px; margin: 0 auto; }
+        h1 { font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+        h1 i { color: #3b82f6; font-size: 24px; }
+        .subhead { color: #475569; font-size: 13px; margin-bottom: 18px; padding-left: 12px; border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 0 12px 12px 0; line-height: 1.3; padding: 6px 12px; }
+        .upload-area { background: #f8fafc; border-radius: 20px; padding: 16px 12px; border: 1px dashed #d1d9e8; margin-bottom: 16px; text-align: center; }
+        .upload-area i { font-size: 34px; color: #3b82f6; opacity: 0.7; margin-bottom: 4px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 8px 0 4px; }
+        .upload-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #3b82f6; color: white; font-weight: 500; padding: 10px 18px; border-radius: 60px; font-size: 15px; box-shadow: 0 4px 12px rgba(59,130,246,0.2); cursor: pointer; border: none; flex: 1; min-width: 80px; }
+        .upload-btn:active { transform: scale(0.96); }
+        .upload-btn-outline { background: #eef2f6; color: #1e293b; box-shadow: none; }
+        .upload-btn-outline i { color: #1e293b; }
+        #file-input, #camera-input, #excel-input { display: none; }
+        .file-name { font-size: 13px; color: #475569; margin-top: 8px; background: #ffffff; padding: 4px 14px; border-radius: 30px; display: inline-block; border: 1px solid #e9edf4; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .image-preview {
+            margin-top: 12px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            border: 1px solid #e2e8f0;
+        }
+        .image-preview img { max-width: 100%; max-height: 200px; display: block; }
+        .action-row { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+        .btn { flex: 1; min-width: 70px; border: none; background: #eef2f6; padding: 12px 8px; border-radius: 60px; font-weight: 600; font-size: 14px; color: #1e293b; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; }
+        .btn-primary { background: #3b82f6; color: white; box-shadow: 0 6px 14px rgba(59,130,246,0.25); }
+        .btn-primary:active { transform: scale(0.96); }
+        .btn-success { background: #10b981; color: white; box-shadow: 0 6px 14px rgba(16,185,129,0.25); }
+        .btn-outline { background: transparent; border: 1.5px solid #d1d9e8; }
+        .btn-outline:active { background: #f1f5f9; }
+        .btn i { font-size: 16px; }
+        .custom-section { background: #f9faff; border-radius: 18px; padding: 12px 14px; margin: 10px 0; border: 1px solid #e9edf4; }
+        .custom-section label { font-weight: 600; color: #1e293b; font-size: 14px; display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+        .custom-section label i { color: #3b82f6; }
+        .custom-textarea { width: 100%; padding: 12px 14px; border-radius: 18px; border: 1.5px solid #dbe0ea; background: white; font-size: 14px; resize: vertical; min-height: 60px; transition: 0.2s; color: #0f172a; }
+        .custom-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+        .result-box { background: #f1f5f9; border-radius: 20px; padding: 14px 16px; margin-top: 14px; border-left: 4px solid #3b82f6; }
+        .result-box .label { font-size: 13px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+        .result-box .label i { color: #3b82f6; }
+        .status-badge { display: inline-block; font-size: 12px; padding: 2px 12px; border-radius: 30px; background: #e9edf4; color: #334155; }
+        .ocr-selector { display: flex; gap: 6px; align-items: center; margin: 6px 0 10px; flex-wrap: wrap; }
+        .ocr-selector label { font-size: 13px; color: #475569; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+        .ocr-selector input[type="radio"] { accent-color: #3b82f6; width: 14px; height: 14px; }
+        .auto-answer-badge { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 30px; background: #dbeafe; color: #1e4a8a; margin-left: 6px; }
+        .answer-display { background: #ecfdf5; border-radius: 14px; padding: 12px 14px; border-left: 4px solid #10b981; margin-top: 4px; }
+        .answer-display .answer-label { font-size: 13px; font-weight: 600; color: #065f46; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .answer-display .answer-label i { font-size: 16px; }
+        .answer-display .answer-text { font-size: 17px; font-weight: 600; color: #0f172a; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .placeholder-text { color: #94a3b8; font-style: italic; padding: 6px 0; }
+        .hidden { display: none !important; }
+        .engine-tip { font-size: 11px; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+        .retry-hint { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 12px; margin-top: 6px; font-size: 13px; color: #92400e; }
+        .clean-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 30px; background: #dbeafe; color: #1e4a8a; margin-left: 6px; }
+        .excel-section { background: #f0f4ff; border-radius: 14px; padding: 10px 14px; margin: 6px 0 2px; border: 1px solid #dbeafe; }
+        .excel-section .excel-label { font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+        .excel-section .excel-label i { color: #8b5cf6; }
+        .excel-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .excel-btns .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 40px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+        .btn-sm-excel-import { background: #8b5cf6; color: white; }
+        .btn-sm-excel-export { background: #10b981; color: white; }
+        .btn-sm-excel-export-all { background: #3b82f6; color: white; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 999; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; max-width: 90%; }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #065f46; }
+        .toast.error { background: #991b1b; }
+        .toast.info { background: #1e4a8a; }
+        .stats-badge { font-size: 11px; color: #64748b; background: #f1f5f9; padding: 2px 10px; border-radius: 30px; margin-left: 6px; }
+        .btn-sm:active { transform: scale(0.95); }
+        .upload-btn, .btn, .btn-sm { touch-action: manipulation; }
+        @media (max-width: 400px) {
+            .app-card { padding: 16px 12px; }
+            .btn { font-size: 13px; padding: 10px 6px; }
+            .upload-btn { font-size: 14px; padding: 8px 14px; }
+            .custom-textarea { font-size: 13px; }
+            .answer-display .answer-text { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-card">
+    <h1><i class="fas fa-camera-retro"></i> 拍照搜题</h1>
+
+    <!-- 拍照/上传 -->
+    <div class="upload-area">
+        <i class="fas fa-image"></i>
+        <div class="btn-group">
+            <label for="camera-input" class="upload-btn"><i class="fas fa-camera"></i> 拍照</label>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+            <label for="file-input" class="upload-btn upload-btn-outline"><i class="fas fa-folder-open"></i> 相册</label>
+            <input type="file" id="file-input" accept="image/*" style="display:none;">
+        </div>
+        <div id="file-name-display" class="file-name">未选择文件</div>
+        <div id="image-preview-container" class="image-preview">
+            <span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>
+        </div>
+    </div>
+
+    <!-- OCR 引擎选择 -->
+    <div class="ocr-selector">
+        <span style="font-size:13px; color:#475569; font-weight:500;">识别引擎：</span>
+        <label><input type="radio" name="ocr-engine" value="youdao" checked> 有道</label>
+        <label><input type="radio" name="ocr-engine" value="ocrspace"> OCR.space</label>
+        <label><input type="radio" name="ocr-engine" value="tesseract"> Tesseract.js</label>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="action-row">
+        <button class="btn btn-primary" id="recognize-btn"><i class="fas fa-search"></i> 识别</button>
+        <button class="btn btn-success" id="solve-btn"><i class="fas fa-brain"></i> 解答</button>
+        <button class="btn btn-outline" id="clear-btn"><i class="fas fa-undo-alt"></i> 清空</button>
+    </div>
+
+    <!-- Excel 导入导出 -->
+    <div class="excel-section">
+        <div class="excel-label"><i class="fas fa-file-excel"></i> 📊 题库管理 <span class="stats-badge" id="stats-badge">0 条</span></div>
+        <div class="excel-btns">
+            <label for="excel-input" class="btn-sm btn-sm-excel-import"><i class="fas fa-upload"></i> 导入</label>
+            <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none;">
+            <button class="btn-sm btn-sm-excel-export" id="export-selected-btn"><i class="fas fa-download"></i> 导出全部</button>
+            <button class="btn-sm btn-sm-excel-export-all" id="export-template-btn"><i class="fas fa-file-alt"></i> 模板</button>
+        </div>
+    </div>
+
+    <!-- 自定义题目 -->
+    <div class="custom-section">
+        <label for="custom-text">
+            <i class="fas fa-pen-fancy"></i> 
+            题目 (可编辑)
+            <span class="clean-badge"></span>
+        </label>
+        <textarea id="custom-text" class="custom-textarea" placeholder="输入或修改题目"></textarea>
+    </div>
+
+    <!-- 结果区域 -->
+    <div class="result-box">
+        <div class="label">
+            <i class="fas fa-file-alt"></i> 
+            识别结果 
+            <span class="status-badge" id="status-badge">等待</span>
+        </div>
+        <div id="placeholder-content" class="placeholder-text">
+            <i class="fas fa-lightbulb"></i> 识别后自动提取题型及题目
+        </div>
+        <div id="answer-display" class="answer-display hidden">
+            <div class="answer-label">
+                <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                答案
+            </div>
+            <div id="answer-text" class="answer-text"></div>
+            <div id="retry-hint" class="retry-hint hidden">
+                <i class="fas fa-lightbulb"></i>
+                <span id="retry-message"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+(function() {
+    // ---------- 有道智云 OCR 密钥 ----------
+    const APP_KEY = '4e31d1ed9eb03607';
+    const APP_SECRET = 'N7dGcr2X6sPlDCoPbsGBNnzJo6rAK25x';
+    const YOUDAO_URL = 'https://openapi.youdao.com/ocr_general';
+    const OCRSPACE_API_KEY = 'helloworld';
+
+    // DOM
+    const fileInput = document.getElementById('file-input');
+    const cameraInput = document.getElementById('camera-input');
+    const excelInput = document.getElementById('excel-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const previewContainer = document.getElementById('image-preview-container');
+    const recognizeBtn = document.getElementById('recognize-btn');
+    const solveBtn = document.getElementById('solve-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const exportSelectedBtn = document.getElementById('export-selected-btn');
+    const exportTemplateBtn = document.getElementById('export-template-btn');
+    const customText = document.getElementById('custom-text');
+    const placeholderContent = document.getElementById('placeholder-content');
+    const answerDisplay = document.getElementById('answer-display');
+    const answerText = document.getElementById('answer-text');
+    const statusBadge = document.getElementById('status-badge');
+    const retryHint = document.getElementById('retry-hint');
+    const retryMessage = document.getElementById('retry-message');
+    const statsBadge = document.getElementById('stats-badge');
+    const toast = document.getElementById('toast');
+    const ocrRadios = document.querySelectorAll('input[name="ocr-engine"]');
+
+    let currentFile = null;
+    let currentQuestion = '';
+
+    // ---------- 题型关键词（用于截取） ----------
+    const TYPE_KEYWORDS = [
+        '判断题', '单选题', '多选题', '单项选择题', '多项选择题',
+        '本市考题', '本市', '本地考题', '填空题', '简答题', '问答题',
+        '论述题', '计算题', '选择题', '是非题'
+    ];
+    // ---------- 动态题库 ----------
+    let knowledgeBase = [
+{
+"keywords":["1单选题事故中造成这个驾驶人致命伤害的原因是什么？A没有系安全带B离转向盘距离过近C没有握紧转向盘D安全气囊没有打开"],
+"answer":"A没有系安全带"
+},
+{
+"keywords":["2多选题驾驶新能源汽车出行前，应提前熟悉哪些功能及操作方法？A电源开关位置及操作方法B辅助驾驶功能操作方法C挡位操作方法D制动踏板位置"],
+"answer":"A电源开关位置及操作方法B辅助驾驶功能操作方法C挡位操作方法D制动踏板位置"
+},
+{
+"keywords":["3多选题驾车驶近停在车站的公交车辆时应（）。A减速慢行B留意公交车变道C注意车辆前方有人穿行D鸣喇叭催促"],
+"answer":"A减速慢行B留意公交车变道C注意车辆前方有人穿行"
+},
+{
+"keywords":["4判断题在山区弯道行驶遇前车行驶缓慢，可越实线借对向车道超车。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["5多选题驾驶新能源汽车过程中出现焦糊味或烟雾时，以下做法正确的是什么？A立即选择安全的地方停车B坐在车上报修C撤离至安全位置报修D用水泼入焦糊味或烟雾处"],
+"answer":"A立即选择安全的地方停车C撤离至安全位置报修"
+},
+{
+"keywords":["6多选题本市考题现场急救应遵循哪些原则？A先止后包B先重后轻C先救后送D先送后救"],
+"answer":"A先止后包B先重后轻C先救后送"
+},
+{
+"keywords":["7判断题驾驶机动车的驾驶人不需要系安全带。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["8多选题驾驶新能源汽车在路口起步时，以下做法正确的是什么？A缓踩加速踏板B注意观察后视镜及周围交通情况C猛踩加速踏板通过路口D注意停止车辆造成的视线盲区内是否有行人或车辆准备通过路口"],
+"answer":"A缓踩加速踏板B注意观察后视镜及周围交通情况D注意停止车辆造成的视线盲区内是否有行人或车辆准备通过路口"
+},
+{
+"keywords":["9单选题在图中山区窄路遇对向来车，以下做法正确的是什么？A减速B在道路中心行驶C加速通过D停车让行"],
+"answer":"D停车让行"
+},
+{
+"keywords":["10多选题驾驶小客车在高速公路上行驶，发现车辆仪表盘故障灯亮了，需停车检查时，下列做法错误的是什么？A在最右侧车道上停车检查B不停车，继续行驶至目的地再检查C先原地停车检查，确认安全再移动D在应急车道停车检查"],
+"answer":"A在最右侧车道上停车检查B不停车，继续行驶至目的地再检查C先原地停车检查，确认安全再移动"
+},
+{
+"keywords":["11判断题在高速公路上意外碰撞护栏时，要稳住方向，适当向碰撞一侧转向，不可急打或乱打转向盘。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["12判断题呼吸、心脏骤停后，急救越早，存活率越高，医学上急救黄金时间为5分钟。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["13多选题车辆发生碰撞时，关于安全带作用的说法错误的是什么？A保护颈部不受伤害B减轻驾乘人员受伤程度C减轻驾驶人疲劳D保持正确驾驶姿势"],
+"answer":"A保护颈部不受伤害C减轻驾驶人疲劳D保持正确驾驶姿势"
+},
+{
+"keywords":["14多选题驾驶新能源汽车出行前，应提前熟悉哪些功能及操作方法？A辅助驾驶功能启动方法B换挡位置及操作方法C辅助驾驶功能退出方法D车机故障时重启的操作方法"],
+"answer":"A辅助驾驶功能启动方法B换挡位置及操作方法C辅助驾驶功能退出方法D车机故障时重启的操作方法"
+},
+{
+"keywords":["15判断题驾驶机动车在山区连续下坡路段行驶时，可以超车。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["16判断题驾驶机动车在高速公路隧道内发生故障但能继续行驶的，应立即向右靠边停车检查。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["17多选题本市考题当发现病人呼吸、心脏骤停时，正确的做法是（）？A立即就地实施心肺复苏B先拨打急救电话，再等待救援人员到场施救C判断病人意识是否丧失D确认胸外心脏按压位置后开展施救"],
+"answer":"A立即就地实施心肺复苏C判断病人意识是否丧失D确认胸外心脏按压位置后开展施救"
+},
+{
+"keywords":["18多选题驾驶汽车不系安全带在遇紧急制动或发生碰撞时可能会发生哪些危险？A撞击风窗玻璃B减少人员伤亡C被甩出车外D造成胸部损伤"],
+"answer":"A撞击风窗玻璃C被甩出车外D造成胸部损伤"
+},
+{
+"keywords":["19判断题如图所示，在这个路段允许掉头。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["20判断题在隧道内车辆发生故障无法继续行驶，可在图中交通标志指示的区域临时停车。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["21多选题在高速公路上驾驶机动车时，突然发现制动失灵，应该怎样做？A寻找最近的避险应急车道B保持冷静，紧握方向盘C打报警电话求助D立即松开加速踏板"],
+"answer":"A寻找最近的避险应急车道B保持冷静，紧握方向盘C打报警电话求助D立即松开加速踏板"
+},
+{
+"keywords":["22单选题本市考题成人心肺复苏时，打开气道最常用的方式是（）。A仰头举颏法B仰头抬颏法C双手托颌法D低头抬颏法"],
+"answer":"A仰头举颏法"
+},
+{
+"keywords":["23判断题驾驶装有安全气囊的汽车可以不系安全带。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["24判断题驾驶车辆遇漫水桥，要停车观察水情，确保行车安全后，再挂低速挡匀速通过。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["25判断题驾驶机动车在图中中山区危险路段会车，靠山体一侧车辆应让行。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["26判断题驾驶人误触踏板导致车辆失控时，应第一时间松开加速踏板，踩制动踏板。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["27判断题设有安全带装置的车辆，应要求车内乘员系安全带。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["28判断题驾车驶入如图所示的路口时，允许掉头行驶。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["29判断题隧道行车发现行驶路线错误时，应驶出隧道，在安全地点停车后，再查询路线。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["30判断题发生爆胎后，不可以长期使用备胎行驶。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["31判断题本市考题成人心肺复苏时，若施救者因疲劳导致按压深度不足，可通过临时加快按压频率来补偿。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["32判断题驾车遇图中情形时可向右变更车道。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["33判断题驾驶机动车行驶到图中路口绿灯亮时，不用为行人让行。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["34单选题驾驶机动车在高速公路行驶，突然发现前方车道上有一个坏轮胎遗留在路面上，应如何处置？A先停车观察，确保安全后通过B加速通过C先减速慢行，确保安全后变道避让D先打方向避让，确保不撞上去"],
+"answer":"C先减速慢行，确保安全后变道避让"
+},
+{
+"keywords":["35判断题本市考题车速较高，可能与前方机动车发生碰撞时，驾驶人应先制动减速，后转向避让。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["36单选题本节考题1岁以下婴儿进行心肺复苏时，按压深度应为（）。A3厘米B4厘米C5厘米D6厘米"],
+"answer":"B4厘米"
+},
+{
+"keywords":["37判断题如图所示，驾驶机动车在这种情况下可以越过中心实线超车。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["38判断题驾驶机动车遇到图中情形时，应鸣喇叭加速通过。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["39判断题在山区下坡路段行驶时，受重力影响车辆制动和操控难度变大，因此不能超车。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["40判断题本市考题车载灭火器仅能扑灭初期小火。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["41单选题本市考题一侧头顶部出血时，应压迫的止血动脉是（）。A颈总动脉B颞浅动脉C面动脉D锁骨下动脉"],
+"answer":"B颞浅动脉"
+},
+{
+"keywords":["42判断题如图所示，驾驶机动车在这种道路上超车可借对向车道行驶。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["43判断题遇图中情形，应加速通过。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["44判断题机动车在隧道内发生故障，如能行驶应慢行驶离隧道，在安全地点停车。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["45单选题本节考题驾驶机动车突然发生倾翻，以下错误的做法是什么？A双手紧握转向盘B迅速跳车逃生C背部紧靠椅背D双脚勾住踏板"],
+"answer":"B迅速跳车逃生"
+},
+{
+"keywords":["46单选题如图所示，驾驶机动车在前方路口怎样掉头？A经左弯待转区进行掉头B在路口虚线处进行掉头C左转信号灯亮时方可掉头D直行信号灯亮时方可掉头"],
+"answer":"B在路口虚线处进行掉头"
+},
+{
+"keywords":["47判断题驾驶机动车遇到图中情形时，应及时避让道路上的牲畜。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["48判断题驾驶机动车在前方路口掉头前先进入左转直行车道。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["49单选题遇到非机动车在机动车道上行驶并阻碍已车前进时，以下做法错误的是什么？A注意自行车行驶动向，减速行驶B谨慎驾驶，低速通过C持续鸣喇叭警告自行车避让D保持与自行车的安全车距"],
+"answer":"C持续鸣喇叭警告自行车避让"
+},
+{
+"keywords":["50判断题驾驶新能源汽车下车前，应确认挡位处于停车挡，并关闭电源开关。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["51判断题本市考题左右两侧车道的车辆向同一车道变更，右侧车道的车辆应让左侧车道车辆先行。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["52单选题运送脊椎骨折的病人时，应选用的搬运工具是（）。A软担架B木板C轮椅D普通床垫"],
+"answer":"B木板"
+},
+{
+"keywords":["53判断题在图中位置可以掉头。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["54判断题夜间驾驶机动车因车流较少，可适当提高车速。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["55多选题夜间对安全行车的影响有（）。A驾驶人反应变慢B驾驶人易疲劳C车辆较少D能见度低，不利于观察道路情况"],
+"answer":"A驾驶人反应变慢B驾驶人易疲劳D能见度低，不利于观察道路情况"
+},
+{
+"keywords":["56判断题本市考题驾驶未安装制动防抱死装置（ABS）的机动车，在冰雪路面上制动时，要间歇或轻踏制动踏板。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["57判断题本市考题对异物插入体内的伤病员，为避免感染，现场应立即拔除异物后再包扎。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["58判断题如图所示，驾驶机动车需要掉头时，只要不影响正常交通可以在虚线处掉头。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["59判断题驾驶不同的新能源汽车之前，应熟悉其驻车制动操作方式，避免停车时忘记开启或误用。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["60判断题隧道内行车应保持足够车距，遇前车突然刹车可以有充足反应时间。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["61判断题本市考题根据《民法典》第184条，因紧急搬运导致患者颈椎二次损伤，施救者需要承担法律责任。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["62多选题关于成人心肺复苏中胸外心脏按压的操作要求，下列说法正确的有（）。A按压位置为胸骨中下1/3交界处B按压深度至少5厘米C按压频率为每分钟100-120次D按压中断时间应尽可能控制在10秒以内"],
+"answer":"A按压位置为胸骨中下1/3交界处B按压深度至少5厘米C按压频率为每分钟100-120次D按压中断时间应尽可能控制在10秒以内"
+},
+{
+"keywords":["63判断题如图所示，在前方交叉路口直行时，要提前在虚线区按导向箭头指示向右变更车道。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["64判断题驾驶新能源汽车出行前，应提前熟悉使用及退出定速巡航或自适应巡航等辅助驾驶功能的方法，以免误操作造成事故。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["65判断题进隧道前为防止追尾，应降低车速，保持足够安全距离。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["66单选题如图所示，驾驶机动车在这个路口怎样左转弯行驶？A沿直行车道左转B进入左转弯待转区C进入直行等待区D沿左车道左转弯"],
+"answer":"B进入左转弯待转区"
+},
+{
+"keywords":["67多选题在同向两车道的高速公路上行驶，遇到前方车速较慢的车辆，以下做法正确的是什么？A重型货车可以借道左侧车道超车B前方两车长时间并排行驶可临时借应急车道超车C变道时要给后方正常行驶车辆预留足够空间D变道超车前要先打转向灯，再观察后视镜"],
+"answer":"A重型货车可以借道左侧车道超车C变道时要给后方正常行驶车辆预留足够空间"
+},
+{
+"keywords":["68判断题涉水行车时，发动机进气口和电气设备进水，可以重新点火启动发动机。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["69多选题本市考题长下坡路段禁止挂空挡，以下正确的说法是什么？A长下坡挂低速挡可以借助发动机控制车速B避免因刹车失灵发生危险C长下坡空挡滑行导致车速过高时，难以抢挂低速挡控制车速D下坡挂空挡，油耗容易增多"],
+"answer":"A长下坡挂低速挡可以借助发动机控制车速B避免因刹车失灵发生危险C长下坡空挡滑行导致车速过高时，难以抢挂低速挡控制车速"
+},
+{
+"keywords":["70单选题本市考题轻微事故中，若对方车辆无保险，是否可以继续使用视频快处？A可使用，后续由对方自行承担赔偿B不可使用，需立即报警C仅可使用视频快处记录证据，再报警D需对方写下欠条后可使用"],
+"answer":"A可使用，后续由对方自行承担赔偿"
+},
+{
+"keywords":["71判断题如图所示，在这个路口左转弯要靠路口中心点左侧转弯。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["72单选题驾驶机动车在高速公路行驶，感觉疲劳想要休息时，下列做法正确的是什么？A加快车速早点到达目的地休息B立即停靠应急车道休息C驾驶至下个服务区休息D通过喝咖啡或抽烟提神"],
+"answer":"C驾驶至下个服务区休息"
+},
+{
+"keywords":["73判断题图中交通标志表示应提前将车速调整到80km/h以下，开启车灯。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["74判断题本市考题在颠簸路段行车，应挂低挡位，缓抬加速踏板。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["75单选题视频快处接通后，后台要求拍摄碰撞点细节，当事人应当如何操作？A让对方拍摄，自己保持电话沟通B关闭视频通话后单独拍摄再上传C按座席指引调整手机角度清晰拍摄D用另一部手机拍摄后发送"],
+"answer":"C按座席指引调整手机角度清晰拍摄"
+},
+{
+"keywords":["76判断题如图所示，驾驶机动车在这个路口左转弯要提前按导向箭头指示向左变更车道。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["77多选题驾驶一辆小轿车在高速公路行驶遇到大货车时，应该怎样做？A不与大货车长时间并排行驶B发现大货车行驶轨迹摇摆时要远离C与大货车保持安全距离D尽量不行驶在两辆大货车中间"],
+"answer":"A不与大货车长时间并排行驶B发现大货车行驶轨迹摇摆时要远离C与大货车保持安全距离D尽量不行驶在两辆大货车中间"
+},
+{
+"keywords":["78判断题驶出隧道口时要握稳方向盘，控制车速。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["79判断题本市考题在路口转弯时，应持续开启转向灯，提醒周围车辆和行人。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["80判断题使用视频快处时，当事人需拍摄事故现场的全景、碰撞点、双方车牌及道路标志标线，共4类照片。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["81判断题如图所示，驾驶机动车遇到这种情况，可以借对向车道超越前车。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["82判断题高速公路临近出口路段左侧车道的分道线会施划实线，防止车辆向右变道影响后方来车安全，因此必须提前变道。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["83判断题夜间跟车要注意观察前车灯光变化，随时做好减速或停车准备。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["84判断题本市考题需改变行车轨迹时，如掉头、变更车道、靠边停车等，在车流量较少的路段，可以不提前打转向灯提示其他交通参与者。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["85单选题本市考题事故现场完成信息采集后，当事人应首先做什么？A等待交警到场确认B即刻撤离现场，避免拥堵C与对方协商赔偿金额后再离开D拍摄更多照片留存"],
+"answer":"B即刻撤离现场，避免拥堵"
+},
+{
+"keywords":["86单选题如图所示，驾驶机动车在这个路段想要掉头时，以下做法正确的是什么？A鸣喇叭提示行人后掉头B对面黄色车辆通过后掉头C行人通过后掉头D继续直行，寻找可掉头路段"],
+"answer":"D继续直行，寻找可掉头路段"
+},
+{
+"keywords":["87单选题驾驶小轿车在高速公路行驶，遇到前面有大货车行驶速度较慢时，下面哪个做法是错误的？A发现车上货物捆扎不牢时要远离B从应急车道超车时要闪灯加鸣喇叭C超车时要果断迅速D与大货车保持安全距离"],
+"answer":"B从应急车道超车时要闪灯加鸣喇叭"
+},
+{
+"keywords":["88单选题夜间在照明良好路段跟车，以下做法正确的是什么？A开启危险报警闪光灯B使用近光灯C关闭所有车灯D使用远光灯"],
+"answer":"B使用近光灯"
+},
+{
+"keywords":["89单选题本市考题牵引发生故障的机动车时，最高车速不能超过多少？A20km/hB30km/hC40km/hD50km/h"],
+"answer":"B30km/h"
+},
+{
+"keywords":["90判断题检查机油前，应将车辆停放在平地。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["91判断题如图所示，机动车A的行为是正确的。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["92判断题冬季隧道出口路面易结冰，此时应紧急制动停车。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["93判断题本书考题视频快处接通后，当事人需自行操作完成所有取证工作。A正确B错误"],
+"answer":"B错误"
+},
+{
+"keywords":["94判断题车辆座椅安全头枕高度应调整到头枕中心和头部平齐。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["95判断题路面中心黄虚线指示在保证安全的情况下可以越线超车。A正确B错误"],
+"answer":"A正确"
+},
+{
+"keywords":["96判断题在隧道内发生火灾时，应迅速弃车逃生。A正确B错误"],
+"answer":"A正确"
+}
+    ];
+
+
+    function updateStats() {
+        let total = 0;
+        knowledgeBase.forEach(item => total += item.keywords.length);
+        statsBadge.textContent = total + ' 条';
+    }
+    updateStats();
+
+    // Toast
+    let toastTimer = null;
+    function showToast(message, type = 'info', duration = 2500) {
+        toast.textContent = message;
+        toast.className = 'toast ' + type;
+        setTimeout(() => toast.classList.add('show'), 10);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ---------- 核心：去除干扰符号，保留题目和选项 ----------
+    function cleanAndExtract(text) {
+        if (!text || text.trim().length === 0) return null;
+        
+        let content = text.trim();
+        
+        // 1. 查找题型关键词的位置，从题型开始截取
+        let bestIndex = -1;
+        let bestKeyword = '';
+        for (let keyword of TYPE_KEYWORDS) {
+            const index = content.indexOf(keyword);
+            if (index !== -1 && (bestIndex === -1 || index < bestIndex)) {
+                bestIndex = index;
+                bestKeyword = keyword;
+            }
+        }
+        if (bestIndex !== -1) {
+            content = content.substring(bestIndex);
+        }
+        
+        // 2. 清理题型后面的多余括号：如 "判断题）" → "判断题"
+        for (let keyword of TYPE_KEYWORDS) {
+            const regex = new RegExp(keyword + '\\s*[)）]', 'g');
+            content = content.replace(regex, keyword);
+        }
+        
+        // 3. 识别选项并裁剪多余内容
+        const optionPatterns = [
+            { letter: 'A', patterns: [/[（(]?A[.、)）]?\s*/, /A[.、)）]\s*/, /[（(]A[)）]/, /A\s+/] },
+            { letter: 'B', patterns: [/[（(]?B[.、)）]?\s*/, /B[.、)）]\s*/, /[（(]B[)）]/, /B\s+/] },
+            { letter: 'C', patterns: [/[（(]?C[.、)）]?\s*/, /C[.、)）]\s*/, /[（(]C[)）]/, /C\s+/] },
+            { letter: 'D', patterns: [/[（(]?D[.、)）]?\s*/, /D[.、)）]\s*/, /[（(]D[)）]/, /D\s+/] },
+        ];
+
+        let optionPositions = {};
+        for (let opt of optionPatterns) {
+            for (let pattern of opt.patterns) {
+                const match = content.match(pattern);
+                if (match) {
+                    const idx = content.indexOf(match[0]);
+                    if (idx !== -1) {
+                        if (!optionPositions[opt.letter] || idx < optionPositions[opt.letter]) {
+                            optionPositions[opt.letter] = idx;
+                        }
+                    }
+                }
+            }
+        }
+
+        const foundLetters = Object.keys(optionPositions).sort();
+        const optionCount = foundLetters.length;
+
+        if (optionCount >= 2) {
+            const lastLetter = foundLetters[foundLetters.length - 1];
+            const lastPos = optionPositions[lastLetter];
+            
+            let endPos = content.length;
+            
+            const afterLast = content.substring(lastPos);
+            const newlineMatch = afterLast.match(/\n/);
+            if (newlineMatch) {
+                const newlineIdx = lastPos + newlineMatch.index;
+                const restAfterNewline = content.substring(newlineIdx + 1).trim();
+                if (restAfterNewline && !restAfterNewline.match(/^[0-9]+\s*\/\s*[0-9]+/)) {
+                    endPos = newlineIdx;
+                }
+            }
+            
+            const separators = ['收藏', '上一题', '下一题', '份设置', '设置', '答题', '背题', '宫对', '笞错', '答题卡'];
+            for (let sep of separators) {
+                const sepIdx = content.indexOf(sep, lastPos);
+                if (sepIdx !== -1 && sepIdx < endPos) {
+                    endPos = sepIdx;
+                }
+            }
+            
+            content = content.substring(0, endPos).trim();
+        }
+
+        let cleaned = content;
+        
+        cleaned = cleaned.replace(/[（(]\s*([A-D])\s*[)）]?\s*/g, '$1');
+        cleaned = cleaned.replace(/([A-D])\s*[)）]/g, '$1');
+        cleaned = cleaned.replace(/\s+/g, ' ');
+        cleaned = cleaned.replace(/^[（(]/, '');
+        cleaned = cleaned.replace(/[）)]$/, '');
+        cleaned = cleaned.replace(/([A-D])([^\s。，、？?！!])/g, '$1 $2');
+        
+        for (let keyword of TYPE_KEYWORDS) {
+            const regex = new RegExp(keyword + '\\s*[)）]', 'g');
+            cleaned = cleaned.replace(regex, keyword);
+        }
+        
+        return {
+            fullText: cleaned,
+            type: bestKeyword || '',
+            content: cleaned,
+            optionCount: optionCount,
+            foundLetters: foundLetters
+        };
+    }
+
+    function updateStatus(text, type = 'info') {
+        statusBadge.innerText = text;
+        const styles = {
+            loading: { bg: '#dbeafe', color: '#1e4a8a' },
+            success: { bg: '#dcfce7', color: '#166534' },
+            error: { bg: '#fee2e2', color: '#991b1b' },
+            info: { bg: '#e9edf4', color: '#334155' }
+        };
+        const s = styles[type] || styles.info;
+        statusBadge.style.background = s.bg;
+        statusBadge.style.color = s.color;
+    }
+
+    function showAnswer(answer) {
+        placeholderContent.classList.add('hidden');
+        answerDisplay.classList.remove('hidden');
+        answerText.textContent = answer;
+        retryHint.classList.add('hidden');
+        updateStatus('已解答', 'success');
+    }
+
+    function showError(errorMsg, showRetrySuggestion = false) {
+        placeholderContent.classList.add('hidden');
+        answerDisplay.classList.remove('hidden');
+        answerText.textContent = '❌ ' + errorMsg;
+        answerText.style.color = '#b91c1c';
+        if (showRetrySuggestion) {
+            retryHint.classList.remove('hidden');
+            retryMessage.textContent = '💡 建议切换到其他引擎重试，或手动输入题目。';
+        } else {
+            retryHint.classList.add('hidden');
+        }
+        updateStatus('识别失败', 'error');
+    }
+
+    function resetAll() {
+        currentFile = null;
+        currentQuestion = '';
+        fileInput.value = '';
+        cameraInput.value = '';
+        fileNameDisplay.innerText = '未选择文件';
+        previewContainer.innerHTML = `<span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>`;
+        placeholderContent.classList.remove('hidden');
+        answerDisplay.classList.add('hidden');
+        answerText.textContent = '';
+        answerText.style.color = '';
+        retryHint.classList.add('hidden');
+        customText.value = '';
+        updateStatus('等待', 'info');
+    }
+
+    function showPreview(file) {
+        if (!file) {
+            previewContainer.innerHTML = `<span style="color: #94a3b8; padding: 12px; font-size: 13px;"><i class="fas fa-eye-slash"></i> 预览区</span>`;
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.innerHTML = `<img src="${e.target.result}" alt="预览图片" style="max-width:100%; max-height:200px; border-radius:10px;">`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleFileSelect(file) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('请选择图片文件');
+            return;
+        }
+        currentFile = file;
+        fileNameDisplay.innerText = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+        showPreview(file);
+        updateStatus('已选图片', 'info');
+        placeholderContent.classList.remove('hidden');
+        answerDisplay.classList.add('hidden');
+        retryHint.classList.add('hidden');
+    }
+
+    function smartTextSolve(ocrText) {
+        const extracted = cleanAndExtract(ocrText);
+        if (!extracted) {
+            return { answer: null, question: ocrText.trim(), type: '' };
+        }
+        
+        const questionText = extracted.content;
+        const questionType = extracted.type;
+        
+        const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+        
+        if (!cleanQuestion || cleanQuestion.length < 2) {
+            return { answer: null, question: questionText, type: questionType };
+        }
+
+        const sortedEntries = [];
+        for (let item of knowledgeBase) {
+            for (let keyword of item.keywords) {
+                const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (normKeyword) {
+                    sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                }
+            }
+        }
+        sortedEntries.sort((a, b) => b.length - a.length);
+
+        let matchedAnswer = null;
+
+        for (let entry of sortedEntries) {
+            if (cleanQuestion === entry.keyword) {
+                matchedAnswer = entry.item.answer;
+                break;
+            }
+        }
+        if (!matchedAnswer) {
+            for (let entry of sortedEntries) {
+                if (cleanQuestion.includes(entry.keyword)) {
+                    matchedAnswer = entry.item.answer;
+                    break;
+                }
+            }
+        }
+        if (!matchedAnswer) {
+            let core = cleanQuestion;
+            for (let kw of TYPE_KEYWORDS) {
+                core = core.replace(kw, '');
+            }
+            core = core.trim();
+            if (core && core.length > 3) {
+                for (let entry of sortedEntries) {
+                    if (core.includes(entry.keyword) || entry.keyword.includes(core.substring(0, 8))) {
+                        matchedAnswer = entry.item.answer;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return {
+            answer: matchedAnswer,
+            question: questionText,
+            type: questionType,
+            cleanQuestion: cleanQuestion
+        };
+    }
+
+    function autoSolveAndShow(ocrText) {
+        const rawText = ocrText.trim();
+        if (!rawText) {
+            showError('未能识别到有效题目');
+            return;
+        }
+
+        const result = smartTextSolve(rawText);
+        const questionText = result ? result.question : rawText;
+        const cleanQuestion = result ? result.cleanQuestion : rawText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+
+        if (!cleanQuestion || cleanQuestion.length < 2) {
+            showError('未能识别到有效题目');
+            return;
+        }
+
+        currentQuestion = questionText;
+        customText.value = questionText;
+
+        let answer = result ? result.answer : null;
+        if (!answer) {
+            answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+        }
+
+        showAnswer(answer);
+    }
+
+    function handleSolve() {
+        const q = customText.value.trim();
+        if (!q) { alert('请先输入或识别题目'); return; }
+        
+        const extracted = cleanAndExtract(q);
+        const questionText = extracted ? extracted.content : q;
+        const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+        
+        if (!cleanQuestion) {
+            showError('未能识别到有效题目');
+            return;
+        }
+        
+        currentQuestion = questionText;
+        
+        let answer = null;
+        const sortedEntries = [];
+        for (let item of knowledgeBase) {
+            for (let keyword of item.keywords) {
+                const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (normKeyword) {
+                    sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                }
+            }
+        }
+        sortedEntries.sort((a, b) => b.length - a.length);
+        
+        for (let entry of sortedEntries) {
+            if (cleanQuestion === entry.keyword || cleanQuestion.includes(entry.keyword)) {
+                answer = entry.item.answer;
+                break;
+            }
+        }
+        
+        if (!answer) {
+            answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+        }
+        
+        showAnswer(answer);
+    }
+
+    // ========== Excel 导入导出 ==========
+    function exportAllToExcel() {
+        try {
+            const data = [];
+            knowledgeBase.forEach(item => {
+                item.keywords.forEach(keyword => {
+                    data.push({ '关键词': keyword, '答案': item.answer });
+                });
+            });
+            if (data.length === 0) { showToast('题库为空', 'error'); return; }
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [{ wch: 60 }, { wch: 40 }];
+            XLSX.utils.book_append_sheet(wb, ws, '题库');
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '题库_' + new Date().toISOString().slice(0,10) + '.xlsx';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('✅ 导出成功！共 ' + data.length + ' 条', 'success');
+        } catch(e) {
+            showToast('❌ 导出失败', 'error');
+        }
+    }
+
+    function exportTemplate() {
+        try {
+            const data = [{ '关键词': '示例题目1', '答案': '示例答案1' }, { '关键词': '示例题目2|备选', '答案': '示例答案2' }];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [{ wch: 40 }, { wch: 30 }];
+            XLSX.utils.book_append_sheet(wb, ws, '模板');
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '题库导入模板.xlsx';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('✅ 模板已下载', 'success');
+        } catch(e) {
+            showToast('❌ 下载失败', 'error');
+        }
+    }
+
+    function importFromExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                if (!jsonData || jsonData.length === 0) { showToast('❌ Excel为空或格式不对', 'error'); return; }
+                const headers = Object.keys(jsonData[0]);
+                let keywordCol = null, answerCol = null;
+                for (let h of headers) {
+                    const lower = h.toLowerCase();
+                    if (lower.includes('关键词') || lower.includes('题目') || lower.includes('keyword') || lower.includes('question')) keywordCol = h;
+                    if (lower.includes('答案') || lower.includes('回答') || lower.includes('answer')) answerCol = h;
+                }
+                if (!keywordCol || !answerCol) { showToast('❌ 未找到"关键词"和"答案"列', 'error'); return; }
+
+                const newItems = [];
+                jsonData.forEach(row => {
+                    const keywordRaw = String(row[keywordCol] || '').trim();
+                    const answerRaw = String(row[answerCol] || '').trim();
+                    if (keywordRaw && answerRaw) {
+                        const keywords = keywordRaw.split('|').map(k => k.trim()).filter(k => k);
+                        if (keywords.length) newItems.push({ keywords, answer: answerRaw });
+                    }
+                });
+                if (newItems.length === 0) { showToast('❌ 未识别到有效数据', 'error'); return; }
+
+                let addedCount = 0;
+                newItems.forEach(newItem => {
+                    let exists = false;
+                    for (let existing of knowledgeBase) {
+                        if (existing.keywords.length === newItem.keywords.length &&
+                            existing.keywords.every(k => newItem.keywords.includes(k)) &&
+                            existing.answer === newItem.answer) {
+                            exists = true; break;
+                        }
+                    }
+                    if (!exists) {
+                        knowledgeBase.push(newItem);
+                        addedCount += newItem.keywords.length;
+                    }
+                });
+                updateStats();
+                showToast(`✅ 导入成功！新增 ${addedCount} 条`, 'success');
+            } catch(err) {
+                showToast('❌ 导入失败: ' + err.message, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ========== OCR ==========
+    async function ocrYoudao(imageFile) {
+        const base64Image = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+            reader.readAsDataURL(imageFile);
+        });
+        const salt = Date.now().toString();
+        const curtime = Math.floor(Date.now() / 1000).toString();
+        const signStr = APP_KEY + base64Image + salt + curtime + APP_SECRET;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(signStr);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const formData = new FormData();
+        formData.append('img', base64Image);
+        formData.append('langType', 'zh-en');
+        formData.append('detectType', '10012');
+        formData.append('imageType', '1');
+        formData.append('docType', 'json');
+        formData.append('appKey', APP_KEY);
+        formData.append('salt', salt);
+        formData.append('curtime', curtime);
+        formData.append('signType', 'v3');
+        formData.append('sign', sign);
+
+        const response = await fetch(YOUDAO_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.errorCode === '0' && result.Result?.regions) {
+            const lines = [];
+            result.Result.regions.forEach(region => {
+                region.lines?.forEach(line => {
+                    if (line.words?.length > 0) {
+                        const wordText = line.words.map(w => w.word).join('');
+                        if (wordText.trim()) lines.push(wordText.trim());
+                    }
+                });
+            });
+            return lines.join('\n');
+        }
+        throw new Error(result.msg || `有道错误码: ${result.errorCode}`);
+    }
+
+    async function ocrOcrspace(imageFile) {
+        try {
+            const base64Image = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.readAsDataURL(imageFile);
+            });
+            const formData = new FormData();
+            formData.append('base64Image', 'data:image/jpeg;base64,' + base64Image);
+            formData.append('apikey', OCRSPACE_API_KEY);
+            formData.append('language', 'chs');
+            formData.append('OCREngine', '2');
+
+            const response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.OCRExitCode === 1 && result.ParsedResults?.length > 0) {
+                const text = result.ParsedResults[0].ParsedText || '';
+                if (text.trim()) return text.trim();
+                throw new Error('未识别到文字');
+            }
+            if (result.ErrorMessage && result.ErrorMessage.includes('limit')) throw new Error('OCR.space 今日免费次数已用完');
+            throw new Error(result.ErrorMessage || 'OCR.space识别失败');
+        } catch (error) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                throw new Error('OCR.space 服务暂时不可用');
+            }
+            throw error;
+        }
+    }
+
+    async function ocrTesseract(imageFile) {
+        if (typeof Tesseract === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        const imageUrl = URL.createObjectURL(imageFile);
+        try {
+            const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng', {
+                logger: (m) => { if (m.status === 'recognizing text') updateStatus('识别中...', 'loading'); }
+            });
+            URL.revokeObjectURL(imageUrl);
+            const text = result.data.text.trim();
+            if (!text) throw new Error('未识别到文字');
+            return text;
+        } catch(e) {
+            URL.revokeObjectURL(imageUrl);
+            throw new Error('Tesseract识别失败: ' + e.message);
+        }
+    }
+
+    async function recognizeImage() {
+        if (!currentFile) {
+            const val = customText.value.trim();
+            if (val) {
+                const extracted = cleanAndExtract(val);
+                const questionText = extracted ? extracted.content : val;
+                const cleanQuestion = questionText.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                if (!cleanQuestion) {
+                    showError('未能识别到有效题目');
+                    return;
+                }
+                currentQuestion = questionText;
+                let answer = null;
+                const sortedEntries = [];
+                for (let item of knowledgeBase) {
+                    for (let keyword of item.keywords) {
+                        const normKeyword = keyword.replace(/[，。、！？；：""''（）\u3000]/g, '').trim();
+                        if (normKeyword) {
+                            sortedEntries.push({ item, keyword: normKeyword, length: normKeyword.length });
+                        }
+                    }
+                }
+                sortedEntries.sort((a, b) => b.length - a.length);
+                for (let entry of sortedEntries) {
+                    if (cleanQuestion === entry.keyword || cleanQuestion.includes(entry.keyword)) {
+                        answer = entry.item.answer;
+                        break;
+                    }
+                }
+                if (!answer) {
+                    answer = '🤔 暂未收录该题目的答案，可手动输入或尝试更完整的表述。';
+                }
+                showAnswer(answer);
+                return;
+            }
+            alert('请先拍照/选择图片，或输入题目');
+            return;
+        }
+
+        let engine = 'youdao';
+        for (let radio of ocrRadios) if (radio.checked) engine = radio.value;
+
+        updateStatus('识别中...', 'loading');
+
+        try {
+            let text = '';
+            const fileCopy = currentFile;
+            if (engine === 'youdao') text = await ocrYoudao(fileCopy);
+            else if (engine === 'ocrspace') text = await ocrOcrspace(fileCopy);
+            else if (engine === 'tesseract') text = await ocrTesseract(fileCopy);
+
+            if (!text || text.length < 2) {
+                if (engine === 'ocrspace') showError('未识别到文字，可能已达调用上限', true);
+                else showError('未识别到文字，请尝试更清晰的图片');
+                return;
+            }
+            
+            autoSolveAndShow(text);
+            
+        } catch (error) {
+            console.error('识别错误:', error);
+            let msg = error.message || '识别失败';
+            if (engine === 'ocrspace' && (msg.includes('limit') || msg.includes('不可用'))) showError(msg, true);
+            else if (engine === 'youdao' && msg.includes('错误码')) showError(msg + ' 💡 建议切换到「Tesseract.js」', true);
+            else showError(msg, false);
+        }
+    }
+
+    // ---------- 事件绑定 ----------
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) handleFileSelect(file);
+        else resetAll();
+    });
+
+    cameraInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) handleFileSelect(file);
+        else resetAll();
+    });
+
+    excelInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) importFromExcel(file);
+        excelInput.value = '';
+    });
+
+    recognizeBtn.addEventListener('click', recognizeImage);
+    solveBtn.addEventListener('click', handleSolve);
+    clearBtn.addEventListener('click', resetAll);
+    exportSelectedBtn.addEventListener('click', exportAllToExcel);
+    exportTemplateBtn.addEventListener('click', exportTemplate);
+
+    // 初始化
+    resetAll();
+    updateStats();
+    console.log('✅ 拍照搜题已启动 (智能去符号)');
+    console.log('📚 内置知识库条目数:', knowledgeBase.reduce((acc, item) => acc + item.keywords.length, 0));
+})();
+</script>
+</body>
+</html>
