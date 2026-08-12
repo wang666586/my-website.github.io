@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>驾考拍题</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f0f4f9;
+            min-height: 100vh;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            color: #1a2639;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .app {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .upload-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px 14px 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            margin-bottom: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-area {
+            border: 2px dashed #dbe0e8;
+            border-radius: 16px;
+            padding: 22px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #fafcff;
+            position: relative;
+            touch-action: manipulation;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-area:active {
+            transform: scale(0.98);
+            background: #f0f4fe;
+        }
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-icon {
+            font-size: 36px;
+            line-height: 1;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .upload-text {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.92rem;
+        }
+        .upload-hint {
+            color: #94a3b8;
+            font-size: 0.72rem;
+            margin-top: 2px;
+        }
+        .upload-area .preview-img-inline {
+            max-width: 100%;
+            max-height: 160px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            object-fit: contain;
+            background: #f8fafc;
+            border: 1px solid #e9edf2;
+            margin: 6px 0;
+        }
+        .upload-area .preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 14px 0 2px;
+        }
+        .action-row .btn {
+            flex: 1 1 auto;
+            min-width: 100px;
+            justify-content: center;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: none;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: all 0.1s;
+            touch-action: manipulation;
+            background: white;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-primary:active {
+            background: #1d4ed8;
+        }
+        .btn-outline {
+            background: transparent;
+            border-color: #d1d9e6;
+        }
+        .btn-outline:active {
+            background: #f1f5f9;
+        }
+        .btn-success {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+        .btn-success:active {
+            background: #15803d;
+        }
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        .btn-danger:active {
+            background: #b91c1c;
+        }
+
+        .question-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 20, 40, 0.04);
+            padding: 28px 28px 20px;
+            border: 1px solid #e9eef4;
+            margin-bottom: 24px;
+            min-height: 220px;
+        }
+        .question-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #687b99;
+            border-bottom: 1px solid #eef3f8;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+        .question-id {
+            background: #eef2f7;
+            padding: 2px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            color: #2a4565;
+            font-weight: 500;
+        }
+        .question-type {
+            background: #e6edf6;
+            padding: 2px 16px;
+            border-radius: 40px;
+            font-size: 13px;
+            color: #2a4565;
+            font-weight: 500;
+        }
+        .question-text {
+            font-size: 22px;
+            font-weight: 550;
+            line-height: 1.5;
+            color: #0b1a2a;
+            margin-bottom: 24px;
+            min-height: 3.2rem;
+            word-break: break-word;
+        }
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: #f8faff;
+            border: 1px solid #edf2f9;
+            transition: background 0.15s;
+            font-size: 17px;
+            color: #1d2e44;
+        }
+        .option-item:hover {
+            background: #f0f6ff;
+            border-color: #d0ddee;
+        }
+        .option-item:nth-child(even) {
+            background: #f4f7fc;
+        }
+        .option-item:nth-child(even):hover {
+            background: #eef4fb;
+        }
+        .option-item.correct-highlight {
+            background: #d4edda !important;
+            border-color: #7fbf8a;
+        }
+        .option-item.correct-highlight .option-letter {
+            background: #28a745;
+            color: white;
+        }
+        .option-letter {
+            font-weight: 700;
+            color: #2a4d7a;
+            min-width: 32px;
+            font-size: 16px;
+            background: #e8eff8;
+            padding: 2px 10px;
+            border-radius: 6px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .option-text {
+            word-break: break-word;
+            flex: 1;
+        }
+        .correct-answer {
+            background: #e3f0e8;
+            padding: 12px 18px;
+            border-radius: 60px;
+            display: inline-block;
+            font-weight: 500;
+            color: #0a4228;
+            border: 1px solid #b8d5c4;
+            font-size: 16px;
+            margin-top: 6px;
+        }
+        .correct-answer strong {
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .correct-answer .multi-answer {
+            background: #1d6b3e;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 20px;
+            margin: 0 2px;
+            font-weight: 600;
+        }
+
+        .match-score-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 2px 14px;
+            border-radius: 40px;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .match-score-badge.high {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .match-score-badge.mid {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .match-score-badge.low {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        @media (max-width: 480px) {
+            .question-card {
+                padding: 20px 16px 16px;
+            }
+            .question-text {
+                font-size: 20px;
+            }
+            .option-item {
+                font-size: 15px;
+                padding: 8px 12px;
+            }
+            .question-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .match-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 10px 14px 14px;
+            margin-top: 12px;
+            border: 1px solid #e2e8f0;
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .match-card.show {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .match-header {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e9edf2;
+        }
+        .match-header .title {
+            font-weight: 600;
+            color: #0b1e33;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .match-header .match-type {
+            font-size: 0.72rem;
+            color: #475569;
+            background: #eef2f6;
+            padding: 0 10px;
+            border-radius: 30px;
+            line-height: 1.8;
+            white-space: nowrap;
+        }
+        .match-header .match-score {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #1d4ed8;
+            background: #dbeafe;
+            padding: 0 10px;
+            border-radius: 30px;
+            line-height: 1.8;
+            white-space: nowrap;
+            margin-left: auto;
+        }
+        .match-header .match-score.high { color: #15803d; background: #dcfce7; }
+        .match-header .match-score.mid { color: #d97706; background: #fef3c7; }
+        .match-header .match-score.low { color: #dc2626; background: #fee2e2; }
+        .match-card .q {
+            font-weight: 600;
+            color: #0b1f3a;
+            padding: 6px 10px;
+            background: #fefce8;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin-bottom: 6px;
+            line-height: 1.6;
+            font-size: 0.88rem;
+        }
+        .match-card .opt {
+            display: block;
+            padding: 2px 0 2px 16px;
+            color: #1e293b;
+            font-size: 0.84rem;
+            line-height: 1.6;
+        }
+        .match-card .answer {
+            font-weight: 700;
+            color: #15803d;
+            padding: 5px 10px;
+            background: #dcfce7;
+            border-radius: 8px;
+            border-left: 4px solid #16a34a;
+            margin-top: 6px;
+            font-size: 0.88rem;
+        }
+        .match-card .no-match {
+            color: #64748b;
+            padding: 6px 0;
+            display: block;
+            font-size: 0.85rem;
+        }
+
+        .io-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin: 12px 0 8px;
+            padding: 4px 0;
+            justify-content: center;
+        }
+        .io-bar .btn {
+            display: none;
+        }
+        .bank-status {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #1e293b;
+            padding: 8px 20px;
+            border-radius: 40px;
+            background: #ffffff;
+            border: 1px solid #dce3ec;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            cursor: default;
+            user-select: none;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        .bank-status .status-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .bank-status .status-badge.valid {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .bank-status .status-badge.invalid {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        /* 隐藏 "X 条" 文字 */
+        .bank-status .count-wrapper {
+            display: none;
+        }
+
+        .file-input-hidden { display: none; }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .upload-card { padding: 14px 10px 14px; border-radius: 20px; }
+            .upload-area { padding: 18px 10px; border-radius: 14px; min-height: 100px; }
+            .upload-icon { font-size: 30px; }
+            .action-row .btn { padding: 8px 12px; font-size: 0.78rem; min-width: 80px; }
+            .question-card { padding: 18px 14px 14px; }
+            .question-text { font-size: 18px; }
+            .option-item { font-size: 14px; padding: 6px 10px; }
+            .match-card { padding: 8px 10px 12px; }
+            .match-card .q { font-size: 0.82rem; }
+            .match-card .opt { font-size: 0.78rem; }
+            .bank-status { font-size: 0.85rem; padding: 6px 12px; }
+        }
+        @media (max-width: 380px) {
+            .action-row .btn { flex: 1 1 100%; }
+            .upload-area { padding: 14px 8px; }
+            .match-header .match-type { display: none; }
+        }
+        .ocr-text {
+            background: #fafcff;
+            border-radius: 14px;
+            padding: 12px 14px;
+            min-height: 60px;
+            border: 1px solid #e9edf2;
+            font-size: 0.88rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #0b1f3a;
+            max-height: 200px;
+            overflow-y: auto;
+            transition: border 0.15s;
+        }
+        .ocr-text:empty::before {
+            content: "等待识别…";
+            color: #94a3b8;
+            font-style: italic;
+        }
+        .ocr-text[contenteditable="true"] {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+
+        .ocr-box {
+            transition: all 0.2s;
+        }
+        .hidden-ocr-box {
+            display: none !important;
+        }
+        .footnote {
+            display: none;
+        }
+        .tags {
+            display: none !important;
+        }
+        .bank-list {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="upload-card">
+        <div class="upload-area" id="uploadArea">
+            <div id="uploadPlaceholder" class="preview-placeholder">
+                <span class="upload-icon">📷</span>
+                <div class="upload-text">点击拍照或上传题目</div>
+                <div class="upload-hint">JPG / PNG / BMP</div>
+            </div>
+            <div id="inlinePreviewContainer" style="display:none; width:100%;">
+                <img id="inlinePreviewImg" class="preview-img-inline" alt="预览" />
+            </div>
+            <input type="file" id="fileInput" accept="image/*" capture="environment">
+        </div>
+        <div class="action-row">
+            <button class="btn btn-primary" id="recognizeBtn">🔍 识别 & 搜题</button>
+            <button class="btn btn-outline" id="clearBtn">🗑️ 清空</button>
+        </div>
+    </div>
+
+    <div class="result-card" style="background:transparent; box-shadow:none; border:none; padding:0;">
+        <div id="ocrBoxWrapper" class="ocr-box hidden-ocr-box" style="background:white; border-radius:24px; padding:16px 16px 8px; border:1px solid #e9eef4; margin-bottom:10px;">
+            <div class="result-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+                <span class="label" style="font-weight:600; color:#0b1e33; font-size:0.88rem;">📄 识别文字</span>
+                <span class="tag" style="background:#eef2f6; padding:0 10px; border-radius:30px; font-size:0.62rem; color:#475569; line-height:1.8;">可编辑</span>
+                <div class="actions" style="display:flex; gap:4px;">
+                    <button class="btn btn-outline" id="editToggleBtn" style="padding:2px 10px; font-size:0.65rem; border-radius:30px;">✏️ 编辑</button>
+                    <button class="btn btn-success" id="saveEditBtn" style="display:none; padding:2px 10px; font-size:0.65rem; border-radius:30px;">💾 保存</button>
+                    <button class="btn btn-outline" id="cancelEditBtn" style="display:none; padding:2px 10px; font-size:0.65rem; border-radius:30px;">❌ 取消</button>
+                </div>
+            </div>
+            <div id="ocrResult" class="ocr-text" contenteditable="false"></div>
+        </div>
+
+        <div class="question-card" id="matchedQuestionCard" style="display:none;">
+            <div id="matchedQuestionContent"></div>
+        </div>
+
+        <div id="matchResultBox" class="match-card" style="display:none;">
+            <div class="match-header">
+                <span class="title">📌 匹配结果</span>
+                <span class="match-type" id="matchTypeDisplay">--</span>
+                <span class="match-score" id="matchScoreDisplay">--</span>
+            </div>
+            <div id="matchResultContent"></div>
+        </div>
+    </div>
+
+    <!-- 题库状态：只显示 有效 / 无效，不显示条数 -->
+    <div class="io-bar">
+        <span class="bank-status" id="bankStatusDisplay">
+            📚 题库状态
+            <span class="status-badge" id="statusBadge">--</span>
+            <span class="count-wrapper">（<span id="bankCount">0</span> 条）</span>
+        </span>
+    </div>
+
+    <div id="bankListContainer" class="bank-list" style="display:none !important;">
+        <div id="bankList"></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        let questionBank = [];
+
+        const $ = id => document.getElementById(id);
+        const fileInput = $('fileInput');
+        const inlinePreviewContainer = $('inlinePreviewContainer');
+        const inlinePreviewImg = $('inlinePreviewImg');
+        const uploadPlaceholder = $('uploadPlaceholder');
+        const recognizeBtn = $('recognizeBtn');
+        const clearBtn = $('clearBtn');
+        const ocrResultDiv = $('ocrResult');
+        const ocrBoxWrapper = $('ocrBoxWrapper');
+        const matchResultBox = $('matchResultBox');
+        const matchResultContent = $('matchResultContent');
+        const matchTypeDisplay = $('matchTypeDisplay');
+        const matchScoreDisplay = $('matchScoreDisplay');
+        const bankCountSpan = $('bankCount');
+        const statusBadge = $('statusBadge');
+        const editToggleBtn = $('editToggleBtn');
+        const saveEditBtn = $('saveEditBtn');
+        const cancelEditBtn = $('cancelEditBtn');
+        const matchedQuestionCard = $('matchedQuestionCard');
+        const matchedQuestionContent = $('matchedQuestionContent');
+
+        let isEditing = false;
+        let currentImageFile = null;
+        let currentOcrText = '';
+        let originalOcrText = '';
+
+        // 更新题库状态显示（只显示 有效 / 无效）
+        function updateBankStatus() {
+            const count = questionBank.length;
+            if (bankCountSpan) {
+                bankCountSpan.textContent = count;
+            }
+            if (count > 0) {
+                statusBadge.textContent = '✅ 有效';
+                statusBadge.className = 'status-badge valid';
+            } else {
+                statusBadge.textContent = '❌ 无效';
+                statusBadge.className = 'status-badge invalid';
+            }
+        }
+
+        function preprocessText(text) {
+            if (!text) return '';
+            return text.replace(/[，。！？、；：""''（）\n\r\t\s]+/g, '').toLowerCase().trim();
+        }
+
+        function extractKeywords(text) {
+            if (!text) return [];
+            const cleaned = text.replace(/[，。！？、；：""''（）\n\r\t\s\d]+/g, ' ');
+            return cleaned.split(/\s+/).filter(w => w.length >= 2);
+        }
+
+        function calculateMatchScore(ocrText, bankItem) {
+            let score = 0;
+            const ocrPre = preprocessText(ocrText);
+            const extractedId = extractIdFromText(ocrText);
+            if (extractedId !== null && bankItem.id === extractedId) return 100;
+
+            let bankKeywords = bankItem.keywords;
+            if (typeof bankKeywords === 'string') bankKeywords = bankKeywords.split(/[,，、\s]+/).filter(k => k.trim());
+            if (!Array.isArray(bankKeywords)) bankKeywords = [String(bankKeywords)];
+            const bankPre = bankKeywords.map(k => preprocessText(k));
+
+            let matched = 0;
+            for (let kw of bankPre) {
+                if (kw && ocrPre.includes(kw)) matched++;
+            }
+            if (bankPre.length > 0) score += (matched / bankPre.length) * 50;
+
+            if (bankItem.question) {
+                const qPre = preprocessText(bankItem.question);
+                const qWords = extractKeywords(bankItem.question).map(w => preprocessText(w));
+                let qMatch = 0;
+                for (let w of qWords) {
+                    if (w && ocrPre.includes(w)) qMatch++;
+                }
+                if (qWords.length > 0) score += (qMatch / qWords.length) * 30;
+                if (qPre.length > 5 && ocrPre.includes(qPre)) score += 20;
+            }
+
+            const opts = bankItem.options || {};
+            for (let k of ['A', 'B', 'C', 'D']) {
+                const opt = opts[k] || '';
+                if (opt) {
+                    const optPre = preprocessText(opt);
+                    if (optPre.length > 2 && ocrPre.includes(optPre)) score += 5;
+                }
+            }
+            return Math.min(score, 100);
+        }
+
+        function extractIdFromText(text) {
+            if (!text) return null;
+            const lower = text.toLowerCase();
+            let m = lower.match(/#\s*(\d+)/);
+            if (m) return parseInt(m[1]);
+            m = lower.match(/id\s*[:：]\s*(\d+)/);
+            if (m) return parseInt(m[1]);
+            m = lower.match(/第\s*(\d+)\s*题/);
+            if (m) return parseInt(m[1]);
+            m = lower.match(/\[(\d+)\]/);
+            if (m) return parseInt(m[1]);
+            return null;
+        }
+
+        function findQuestionById(id) {
+            for (let e of questionBank) {
+                if (e.id === id) return e;
+            }
+            return null;
+        }
+
+        function matchAnswerFromBank(text) {
+            if (!text || !text.trim() || questionBank.length === 0) {
+                return { found: false, answer: '', question: '', keyword: '', options: { A: '', B: '', C: '', D: '' }, id: null, score: 0 };
+            }
+
+            const targetId = extractIdFromText(text);
+            if (targetId !== null) {
+                const entry = findQuestionById(targetId);
+                if (entry) {
+                    const opts = entry.options || {};
+                    return { found: true, answer: entry.answer || '', keyword: 'ID:' + targetId,
+                        question: entry.question || '', options: { A: opts.A || '', B: opts.B || '', C: opts.C || '', D: opts.D || '' }, id: entry.id, score: 100 };
+                }
+            }
+
+            let best = null, bestScore = 20;
+            for (let entry of questionBank) {
+                const s = calculateMatchScore(text, entry);
+                if (s > bestScore) { bestScore = s; best = entry; }
+            }
+            if (best) {
+                const opts = best.options || {};
+                return { found: true, answer: best.answer || '', keyword: '匹配度 ' + Math.round(bestScore) + '%',
+                    question: best.question || '', options: { A: opts.A || '', B: opts.B || '', C: opts.C || '', D: opts.D || '' }, id: best.id, score: bestScore };
+            }
+            return { found: false, answer: '', question: '', keyword: '', options: { A: '', B: '', C: '', D: '' }, id: null, score: 0 };
+        }
+
+        function renderMatchedQuestion(matchResult) {
+            const card = matchedQuestionCard;
+            const content = matchedQuestionContent;
+
+            if (!matchResult || !matchResult.found || !matchResult.question) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            const q = matchResult;
+            const letters = ['A', 'B', 'C', 'D'];
+            const correctLetters = q.answer ? q.answer.split('') : [];
+            const opts = q.options || {};
+            const score = Math.round(q.score || 0);
+
+            let scoreClass = 'low';
+            if (score >= 70) scoreClass = 'high';
+            else if (score >= 40) scoreClass = 'mid';
+
+            let optionsHtml = '';
+            letters.forEach((letter, idx) => {
+                const optText = opts[letter] || '';
+                if (!optText) return;
+                const isCorrect = correctLetters.includes(letter);
+                optionsHtml += `
+                    <div class="option-item ${isCorrect ? 'correct-highlight' : ''}">
+                        <span class="option-letter">${letter}</span>
+                        <span class="option-text">${optText}</span>
+                        ${isCorrect ? ' ✅' : ''}
+                    </div>
+                `;
+            });
+
+            let correctDisplay = '';
+            if (q.answer) {
+                const lettersArray = q.answer.split('');
+                const formattedLetters = lettersArray.map(l => `<span class="multi-answer">${l}</span>`).join(' ');
+                correctDisplay = `正确答案：${formattedLetters}`;
+            } else {
+                correctDisplay = '未设置正确答案';
+            }
+
+            const typeColors = {
+                '单选题': '#e3f0e8',
+                '多选题': '#fef3e2',
+                '判断题': '#e3edf7',
+                '填空题': '#f5e6f0',
+            };
+            const detectedType = detectQuestionType(currentOcrText || '');
+            const bgColor = typeColors[detectedType] || '#eef2f7';
+
+            content.innerHTML = `
+                <div class="question-meta">
+                    <span>📌 匹配结果</span>
+                    <span>
+                        <span class="question-id">🆔 ${q.id || '?'}</span>
+                        <span class="question-type" style="background:${bgColor};">📂 ${detectedType || '未分类'}</span>
+                        <span class="match-score-badge ${scoreClass}">🎯 ${score}%</span>
+                    </span>
+                </div>
+                <div class="question-text">${q.question}</div>
+                <div class="options-list">${optionsHtml}</div>
+                <div class="correct-answer"><strong>✓</strong> ${correctDisplay}</div>
+            `;
+        }
+
+        function updateMatchDisplay(matchResult) {
+            const detectedType = detectQuestionType(currentOcrText || '');
+            matchTypeDisplay.textContent = detectedType || '--';
+
+            if (!isEditing) {
+                ocrBoxWrapper.classList.add('hidden-ocr-box');
+            }
+
+            renderMatchedQuestion(matchResult);
+
+            if (matchResult.found && matchResult.answer) {
+                matchResultBox.classList.add('show');
+                const score = Math.round(matchResult.score || 0);
+                matchScoreDisplay.textContent = '匹配度 ' + score + '%';
+                matchScoreDisplay.className = 'match-score';
+                if (score >= 70) matchScoreDisplay.classList.add('high');
+                else if (score >= 40) matchScoreDisplay.classList.add('mid');
+                else matchScoreDisplay.classList.add('low');
+
+                const opt = matchResult.options || {};
+                let html = '';
+                html += `<div class="q">📖 ${matchResult.question || '（无题目内容）'}</div>`;
+                for (let k of ['A', 'B', 'C', 'D']) {
+                    if (opt[k] && opt[k].trim()) {
+                        html += `<span class="opt">${k}. ${opt[k]}</span>`;
+                    }
+                }
+                html += `<div class="answer">✅ 正确答案：${matchResult.answer}</div>`;
+                matchResultContent.innerHTML = html;
+            } else {
+                matchResultBox.classList.add('show');
+                matchScoreDisplay.textContent = '未匹配';
+                matchScoreDisplay.className = 'match-score low';
+                matchResultContent.innerHTML = '<span class="no-match">❌ 未找到匹配项，建议检查关键词或导入更多题目</span>';
+                matchedQuestionCard.style.display = 'none';
+            }
+        }
+
+        // ---------- 导入 Excel（从 File 对象） ----------
+        function importBankFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        if (json.length < 2) { reject('至少需要表头+1行数据'); return; }
+
+                        const header = json[0];
+                        const map = { id: -1, question: -1, keywords: -1, A: -1, B: -1, C: -1, D: -1, answer: -1 };
+                        header.forEach((h, idx) => {
+                            const s = String(h).trim().toLowerCase();
+                            if (s === 'id' || s === '编号') map.id = idx;
+                            else if (s === '题目' || s === 'question') map.question = idx;
+                            else if (s === '关键词' || s === 'keyword') map.keywords = idx;
+                            else if (s === 'a' || s === 'a.') map.A = idx;
+                            else if (s === 'b' || s === 'b.') map.B = idx;
+                            else if (s === 'c' || s === 'c.') map.C = idx;
+                            else if (s === 'd' || s === 'd.') map.D = idx;
+                            else if (s === '答案' || s === 'answer') map.answer = idx;
+                        });
+                        if (map.keywords === -1 && header.length > 2) map.keywords = 2;
+                        if (map.answer === -1 && header.length > 7) map.answer = 7;
+
+                        const entries = [];
+                        for (let i = 1; i < json.length; i++) {
+                            const row = json[i];
+                            if (!row || row.every(c => !c || String(c).trim() === '')) continue;
+                            const id = map.id !== -1 && row[map.id] ? parseInt(row[map.id]) || (questionBank.length + 1) : (questionBank.length + 1);
+                            const question = map.question !== -1 ? String(row[map.question] || '').trim() : '';
+                            const kwStr = map.keywords !== -1 ? String(row[map.keywords] || '').trim() : '';
+                            const optA = map.A !== -1 ? String(row[map.A] || '').trim() : '';
+                            const optB = map.B !== -1 ? String(row[map.B] || '').trim() : '';
+                            const optC = map.C !== -1 ? String(row[map.C] || '').trim() : '';
+                            const optD = map.D !== -1 ? String(row[map.D] || '').trim() : '';
+                            const answer = map.answer !== -1 ? String(row[map.answer] || '').trim().toUpperCase() : '';
+                            if (!question && !kwStr) continue;
+                            let keywords = kwStr ? kwStr.split(/[,，、\s]+/).filter(k => k.trim()) : [];
+                            if (keywords.length === 0 && question) {
+                                keywords = question.split(/[,，、\s，。！？、；：""''（）\n\r]+/).filter(w => w.length > 1).slice(0, 4);
+                            }
+                            if (keywords.length === 0) continue;
+                            entries.push({ id, keywords, answer: answer || 'A', question: question || keywords.join('、'), options: { A: optA, B: optB, C: optC, D: optD } });
+                        }
+                        if (entries.length === 0) { reject('未解析到有效数据，请检查格式'); return; }
+                        questionBank = entries;
+                        updateBankStatus();
+                        resolve(entries.length);
+                    } catch (err) { reject(err.message); }
+                };
+                reader.onerror = function() { reject('读取文件失败'); };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // ---------- 自动导入（页面加载） ----------
+        function autoImportOnLoad() {
+            const fileUrl = './驾考题库.xlsx';
+            fetch(fileUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log('未找到自动导入文件: 驾考题库.xlsx');
+                        updateBankStatus();
+                        return null;
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    if (!blob) return;
+                    const file = new File([blob], '驾考题库.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    importBankFromFile(file)
+                        .then(count => {
+                            console.log('✅ 自动导入成功，共 ' + count + ' 条题目');
+                            if (currentOcrText) {
+                                updateMatchDisplay(matchAnswerFromBank(currentOcrText));
+                            }
+                        })
+                        .catch(err => {
+                            console.warn('自动导入失败:', err);
+                            updateBankStatus();
+                        });
+                })
+                .catch(err => {
+                    console.log('自动导入跳过（文件不存在或无法访问）');
+                    updateBankStatus();
+                });
+        }
+
+        // ---------- OCR ----------
+        async function performOCR(file) {
+            if (!file) { alert('请先上传图片'); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('apikey', 'K89168494188957');
+            fd.append('language', 'chs');
+            fd.append('isOverlayRequired', 'false');
+            fd.append('detectOrientation', 'true');
+            fd.append('scale', 'true');
+            fd.append('OCREngine', '2');
+
+            try {
+                recognizeBtn.disabled = true;
+                recognizeBtn.textContent = '⏳ 识别中...';
+                ocrResultDiv.textContent = '⏳ 正在识别...';
+                matchResultBox.classList.remove('show');
+                matchedQuestionCard.style.display = 'none';
+                ocrBoxWrapper.classList.remove('hidden-ocr-box');
+
+                const resp = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: fd });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                if (data.IsErroredOnProcessing) throw new Error(data.ErrorMessage || 'OCR失败');
+
+                const parsed = data.ParsedResults;
+                if (!parsed || parsed.length === 0) throw new Error('未识别到文字');
+
+                let fullText = '';
+                for (let p of parsed) {
+                    if (p.ParsedText) fullText += p.ParsedText + '\n';
+                }
+                fullText = fullText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+                if (!fullText) { ocrResultDiv.textContent = '⚠️ 未提取到文字'; recognizeBtn.disabled = false; recognizeBtn.textContent = '🔍 识别 & 搜题'; return; }
+
+                currentOcrText = fullText;
+                originalOcrText = fullText;
+                ocrResultDiv.textContent = fullText;
+                ocrResultDiv.setAttribute('contenteditable', 'false');
+                isEditing = false;
+                editToggleBtn.textContent = '✏️ 编辑';
+                saveEditBtn.style.display = 'none';
+                cancelEditBtn.style.display = 'none';
+
+                const match = matchAnswerFromBank(fullText);
+                updateMatchDisplay(match);
+                recognizeBtn.disabled = false;
+                recognizeBtn.textContent = '✅ 识别完成';
+            } catch (err) {
+                ocrResultDiv.textContent = '❌ OCR 失败: ' + err.message;
+                recognizeBtn.disabled = false;
+                recognizeBtn.textContent = '🔍 重试';
+                ocrBoxWrapper.classList.remove('hidden-ocr-box');
+            }
+        }
+
+        function detectQuestionType(text) {
+            if (!text) return '未识别';
+            const l = text.toLowerCase();
+            if (/(多选|多选题|多项选择|不定项)/i.test(l)) return '多选题';
+            if (/(判断|判断题|对错|正确|错误|√|×)/i.test(l) && !/(单选|多选)/i.test(l)) return '判断题';
+            if (/(单选|单选题|单项选择题)/i.test(l)) return '单选题';
+            if (/[A-D]\./.test(text)) return '单选题 (推测)';
+            return '未识别';
+        }
+
+        function updateInlinePreview(file) {
+            if (!file) {
+                inlinePreviewContainer.style.display = 'none';
+                inlinePreviewImg.src = '';
+                uploadPlaceholder.style.display = 'flex';
+                return;
+            }
+            const r = new FileReader();
+            r.onload = (e) => {
+                inlinePreviewImg.src = e.target.result;
+                inlinePreviewContainer.style.display = 'flex';
+                uploadPlaceholder.style.display = 'none';
+            };
+            r.readAsDataURL(file);
+        }
+
+        function clearAll() {
+            currentImageFile = null;
+            currentOcrText = '';
+            originalOcrText = '';
+            ocrResultDiv.textContent = '';
+            ocrResultDiv.setAttribute('contenteditable', 'false');
+            isEditing = false;
+            editToggleBtn.textContent = '✏️ 编辑';
+            saveEditBtn.style.display = 'none';
+            cancelEditBtn.style.display = 'none';
+            matchResultBox.classList.remove('show');
+            matchResultContent.innerHTML = '';
+            matchTypeDisplay.textContent = '--';
+            matchScoreDisplay.textContent = '--';
+            matchScoreDisplay.className = 'match-score';
+            inlinePreviewContainer.style.display = 'none';
+            inlinePreviewImg.src = '';
+            uploadPlaceholder.style.display = 'flex';
+            fileInput.value = '';
+            recognizeBtn.disabled = false;
+            recognizeBtn.textContent = '🔍 识别 & 搜题';
+            matchedQuestionCard.style.display = 'none';
+            ocrBoxWrapper.classList.add('hidden-ocr-box');
+        }
+
+        // ---------- 事件绑定 ----------
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                currentImageFile = file;
+                updateInlinePreview(file);
+                currentOcrText = '';
+                originalOcrText = '';
+                ocrResultDiv.textContent = '';
+                ocrResultDiv.setAttribute('contenteditable', 'false');
+                isEditing = false;
+                editToggleBtn.textContent = '✏️ 编辑';
+                saveEditBtn.style.display = 'none';
+                cancelEditBtn.style.display = 'none';
+                matchResultBox.classList.remove('show');
+                matchResultContent.innerHTML = '';
+                matchTypeDisplay.textContent = '--';
+                matchScoreDisplay.textContent = '--';
+                matchScoreDisplay.className = 'match-score';
+                matchedQuestionCard.style.display = 'none';
+                ocrBoxWrapper.classList.add('hidden-ocr-box');
+            } else clearAll();
+        });
+
+        recognizeBtn.addEventListener('click', function() {
+            if (!currentImageFile) {
+                if (fileInput.files && fileInput.files.length > 0) {
+                    currentImageFile = fileInput.files[0];
+                    updateInlinePreview(currentImageFile);
+                } else { alert('请先选择一张图片'); return; }
+            }
+            performOCR(currentImageFile);
+        });
+
+        clearBtn.addEventListener('click', clearAll);
+
+        editToggleBtn.addEventListener('click', function() {
+            if (!ocrResultDiv.textContent || ocrResultDiv.textContent.trim() === '') {
+                alert('没有文字可编辑，请先识别图片');
+                return;
+            }
+            if (!isEditing) {
+                ocrResultDiv.setAttribute('contenteditable', 'true');
+                ocrResultDiv.focus();
+                isEditing = true;
+                editToggleBtn.textContent = '✏️ 编辑中...';
+                saveEditBtn.style.display = 'inline-flex';
+                cancelEditBtn.style.display = 'inline-flex';
+                originalOcrText = ocrResultDiv.textContent;
+                ocrBoxWrapper.classList.remove('hidden-ocr-box');
+            }
+        });
+
+        saveEditBtn.addEventListener('click', function() {
+            const newText = ocrResultDiv.textContent.trim();
+            if (!newText) { alert('文字不能为空'); return; }
+            currentOcrText = newText;
+            originalOcrText = newText;
+            ocrResultDiv.setAttribute('contenteditable', 'false');
+            isEditing = false;
+            editToggleBtn.textContent = '✏️ 编辑';
+            saveEditBtn.style.display = 'none';
+            cancelEditBtn.style.display = 'none';
+            const match = matchAnswerFromBank(newText);
+            updateMatchDisplay(match);
+        });
+
+        cancelEditBtn.addEventListener('click', function() {
+            ocrResultDiv.textContent = originalOcrText || currentOcrText || '';
+            ocrResultDiv.setAttribute('contenteditable', 'false');
+            isEditing = false;
+            editToggleBtn.textContent = '✏️ 编辑';
+            saveEditBtn.style.display = 'none';
+            cancelEditBtn.style.display = 'none';
+            if (currentOcrText) {
+                const match = matchAnswerFromBank(currentOcrText);
+                if (match.found) {
+                    ocrBoxWrapper.classList.add('hidden-ocr-box');
+                } else {
+                    ocrBoxWrapper.classList.remove('hidden-ocr-box');
+                }
+            } else {
+                ocrBoxWrapper.classList.add('hidden-ocr-box');
+            }
+        });
+
+        document.addEventListener('dragover', e => e.preventDefault());
+        document.addEventListener('drop', e => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    fileInput.files = files;
+                    currentImageFile = file;
+                    updateInlinePreview(file);
+                    currentOcrText = '';
+                    originalOcrText = '';
+                    ocrResultDiv.textContent = '';
+                    ocrResultDiv.setAttribute('contenteditable', 'false');
+                    isEditing = false;
+                    editToggleBtn.textContent = '✏️ 编辑';
+                    saveEditBtn.style.display = 'none';
+                    cancelEditBtn.style.display = 'none';
+                    matchResultBox.classList.remove('show');
+                    matchResultContent.innerHTML = '';
+                    matchTypeDisplay.textContent = '--';
+                    matchScoreDisplay.textContent = '--';
+                    matchScoreDisplay.className = 'match-score';
+                    matchedQuestionCard.style.display = 'none';
+                    ocrBoxWrapper.classList.add('hidden-ocr-box');
+                }
+            }
+        });
+
+        // ---------- 初始化 ----------
+        ocrBoxWrapper.classList.add('hidden-ocr-box');
+        questionBank = [];
+        updateBankStatus();
+
+        // 页面加载后自动导入同目录下的 驾考题库.xlsx
+        setTimeout(autoImportOnLoad, 300);
+
+        console.log('🚗 驾考拍题已启动，题库:', questionBank.length, '条');
+    })();
+</script>
+</body>
+</html>
