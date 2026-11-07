@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>首页跳转设置</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    body {
+        font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #eef2ff 0%, #f0f4ff 40%, #e8f0ff 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 背景装饰光斑 */
+    body::before,
+    body::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+        opacity: 0.55;
+        z-index: 0;
+    }
+
+    body::before {
+        width: 420px;
+        height: 420px;
+        background: #c7d2fe;
+        top: -80px;
+        left: -100px;
+    }
+
+    body::after {
+        width: 520px;
+        height: 520px;
+        background: #dbeafe;
+        bottom: -120px;
+        right: -140px;
+    }
+
+    .glass-card {
+        position: relative;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow:
+            0 20px 50px rgba(100, 120, 180, 0.18),
+            0 8px 20px rgba(100, 120, 180, 0.12);
+    }
+
+    /* 倒计时圆环 */
+    .countdown-ring {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        border: 4px solid rgba(226, 232, 240, 0.6);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .countdown-ring::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 4px solid transparent;
+        border-top-color: #6366f1;
+        border-right-color: #6366f1;
+        animation: spin 1s linear infinite;
+    }
+
+    .countdown-ring .number {
+        position: relative;
+        z-index: 1;
+        font-size: 28px;
+        font-weight: 700;
+        color: #4f46e5;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* 表单控件 */
+    .form-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        margin-bottom: 14px;
+    }
+
+    .form-label {
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    select,
+    input[type="text"] {
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        color: #0f172a;
+        text-align: right;
+        cursor: pointer;
+    }
+
+    input[type="text"] {
+        cursor: text;
+        text-align: left;
+        width: 60%;
+    }
+
+    /* 开关 */
+    .switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        background: #cbd5e1;
+        border-radius: 999px;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+
+    .switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .switch.active {
+        background: #6366f1;
+    }
+
+    .switch.active::after {
+        left: 22px;
+    }
+
+    /* 按钮 */
+    .btn {
+        padding: 10px 22px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: 0.3s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-white {
+        background: rgba(255, 255, 255, 0.9);
+        color: #475569;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .btn-white:hover {
+        background: white;
+        box-shadow: 0 6px 16px rgba(100, 116, 139, 0.12);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        box-shadow: 0 8px 18px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-primary:hover {
+        opacity: 0.92;
+    }
+
+    /* 下拉菜单 */
+    .dropdown-menu {
+        position: absolute;
+        top: 72px;
+        right: 18px;
+        min-width: 220px;
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 20px 40px rgba(71, 85, 105, 0.18);
+        padding: 10px;
+        display: none;
+        z-index: 20;
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 14px;
+        color: #334155;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .dropdown-item:hover {
+        background: #f1f5f9;
+    }
+
+    .dropdown-item .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #cbd5e1;
+    }
+
+    .dropdown-item.active .dot {
+        background: #6366f1;
+    }
+
+    /* 提示 */
+    .toast {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.92);
+        color: white;
+        padding: 10px 22px;
+        border-radius: 999px;
+        font-size: 13px;
+        opacity: 0;
+        transition: 0.3s;
+        pointer-events: none;
+        z-index: 50;
+    }
+
+    .toast.show {
+        opacity: 1;
+        top: 32px;
+    }
+
+    /* 倒计时进度条 */
+    .progress-track {
+        height: 6px;
+        background: rgba(226, 232, 240, 0.8);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 14px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        border-radius: 999px;
+        transition: width 1s linear;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+</style>
+</head>
+<body>
+
+<div class="min-h-screen flex items-center justify-center p-4 relative">
+    <div class="glass-card rounded-[28px] w-full max-w-md p-7 relative">
+
+        <!-- 关闭设置按钮 -->
+        <button id="closeSettingsBtn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+            ✕
+        </button>
+
+        <!-- 倒计时圆环 -->
+        <div class="flex justify-center mb-4">
+            <div class="countdown-ring">
+                <span class="number" id="countdownNum">5</span>
+            </div>
+        </div>
+
+        <h1 class="text-center text-[17px] font-semibold text-slate-800 mb-5">即将跳转</h1>
+
+        <!-- 目标地址 -->
+        <div class="form-row">
+            <span class="form-label">目标地址</span>
+            <div class="flex items-center gap-2 relative">
+                <span id="targetUrlDisplay" class="text-sm text-slate-800">dashboard.html</span>
+                <button id="pageSelectBtn" class="w-7 h-7 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div id="pageDropdown" class="dropdown-menu">
+                    <!-- 页面选项由 JS 生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 倒计时 -->
+        <div class="form-row">
+            <span class="form-label">倒计时</span>
+            <div class="flex items-center gap-3">
+                <input id="delaySlider" type="range" min="1" max="30" value="5" class="w-28 accent-indigo-600 cursor-pointer" />
+                <span class="text-sm font-semibold text-indigo-600 min-w-[40px] text-right"><span id="delayValue">5</span>s</span>
+            </div>
+        </div>
+
+        <!-- 自定义网址 -->
+        <div id="customUrlRow" class="form-row hidden">
+            <span class="form-label">自定义网址</span>
+            <input id="customUrlInput" type="text" placeholder="https://example.com" />
+        </div>
+
+        <!-- 启用自动跳转 -->
+        <div class="form-row">
+            <span class="form-label">启用自动跳转</span>
+            <div id="autoJumpSwitch" class="switch active"></div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-track">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+
+        <!-- 按钮区 -->
+        <div class="flex items-center justify-center gap-3 mt-6">
+            <button id="cancelBtn" class="btn btn-white">取消跳转</button>
+            <button id="jumpNowBtn" class="btn btn-primary">立即跳转</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">设置已保存</div>
+
+<script>
+    // ========== 配置区 ==========
+    const FALLBACK_PAGES = [
+        { name: "数据看板", file: "dashboard.html" },
+        { name: "管理后台", file: "admin.html" },
+        { name: "个人中心", file: "profile.html" },
+        { name: "设置页面", file: "settings.html" }
+    ];
+
+    const AUTO_SCAN_ENABLED = true;
+    const STORAGE_KEY = "jump_settings";
+
+    let countdownTimer = null;
+    let currentCountdown = 5;
+    let totalSeconds = 5;
+    let autoJumpEnabled = true;
+
+    // ========== 初始化 ==========
+    document.addEventListener("DOMContentLoaded", async () => {
+        await initPageSelect();
+        bindEvents();
+        loadUIFromSettings();
+        startCountdownIfEnabled();
+    });
+
+    // ========== 事件绑定 ==========
+    function bindEvents() {
+        const slider = document.getElementById("delaySlider");
+        const delayValue = document.getElementById("delayValue");
+
+        slider.addEventListener("input", e => {
+            delayValue.textContent = e.target.value;
+            saveSettings();
+        });
+
+        document.getElementById("autoJumpSwitch").addEventListener("click", e => {
+            e.currentTarget.classList.toggle("active");
+            autoJumpEnabled = e.currentTarget.classList.contains("active");
+            saveSettings();
+        });
+
+        document.getElementById("cancelBtn").addEventListener("click", cancelJump);
+        document.getElementById("jumpNowBtn").addEventListener("click", jumpNow);
+        document.getElementById("closeSettingsBtn").addEventListener("click", cancelJump);
+
+        document.getElementById("pageSelectBtn").addEventListener("click", e => {
+            e.stopPropagation();
+            document.getElementById("pageDropdown").classList.toggle("show");
+        });
+
+        document.addEventListener("click", () => {
+            document.getElementById("pageDropdown").classList.remove("show");
+        });
+
+        document.getElementById("customUrlInput").addEventListener("change", () => {
+            saveSettings();
+        });
+    }
+
+    // ========== 页面下拉列表 ==========
+    async function initPageSelect() {
+        const dropdown = document.getElementById("pageDropdown");
+        let pageList = [...FALLBACK_PAGES];
+
+        if (AUTO_SCAN_ENABLED) {
+            try {
+                const scanned = await scanDirectoryPages();
+                if (scanned.length > 0) pageList = scanned;
+            } catch (e) {
+                // 使用兜底列表
+            }
+        }
+
+        dropdown.innerHTML = "";
+
+        pageList.forEach(page => {
+            const item = document.createElement("div");
+            item.className = "dropdown-item";
+            item.dataset.value = page.file;
+            item.innerHTML = `<span class="dot"></span>${page.name}`;
+            item.addEventListener("click", () => {
+                selectPage(page.file, page.name);
+            });
+            dropdown.appendChild(item);
+        });
+
+        const customItem = document.createElement("div");
+        customItem.className = "dropdown-item";
+        customItem.dataset.value = "custom";
+        customItem.innerHTML = `<span class="dot"></span>自定义网址`;
+        customItem.addEventListener("click", () => {
+            selectCustom();
+        });
+        dropdown.appendChild(customItem);
+    }
+
+    // ========== 自动扫描目录 ==========
+    async function scanDirectoryPages() {
+        const res = await fetch("./");
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const links = doc.querySelectorAll("a");
+        const pages = [];
+
+        links.forEach(link => {
+            const href = link.getAttribute("href");
+            if (
+                href &&
+                href.endsWith(".html") &&
+                href !== "index.html" &&
+                !href.startsWith("/") &&
+                !href.startsWith("http") &&
+                !href.includes("?")
+            ) {
+                pages.push({
+                    name: href.replace(".html", "").replace(/-/g, " "),
+                    file: href
+                });
+            }
+        });
+
+        return pages;
+    }
+
+    // ========== 选择页面 ==========
+    function selectPage(file, name) {
+        document.getElementById("targetUrlDisplay").textContent = file;
+        document.getElementById("pageDropdown").classList.remove("show");
+        document.getElementById("customUrlRow").classList.add("hidden");
+        saveSettings();
+    }
+
+    function selectCustom() {
+        document.getElementById("targetUrlDisplay").textContent = "自定义网址";
+        document.getElementById("pageDropdown").classList.remove("show");
+        document.getElementById("customUrlRow").classList.remove("hidden");
+        document.getElementById("customUrlInput").focus();
+        saveSettings();
+    }
+
+    // ========== 设置读写 ==========
+    function loadSettings() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveSettings() {
+        const target = document.getElementById("targetUrlDisplay").textContent;
+        const delay = parseInt(document.getElementById("delaySlider").value);
+        const customUrl = document.getElementById("customUrlInput").value.trim();
+
+        let url = target;
+        if (target === "自定义网址" && customUrl) {
+            url = /^https?:\/\//i.test(customUrl) ? customUrl : "https://" + customUrl;
+        }
+
+        const settings = {
+            url,
+            delay,
+            enabled: autoJumpEnabled
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    function loadUIFromSettings() {
+        const settings = loadSettings();
+        if (!settings) return;
+
+        if (settings.delay) {
+            document.getElementById("delaySlider").value = settings.delay;
+            document.getElementById("delayValue").textContent = settings.delay;
+        }
+
+        if (typeof settings.enabled === "boolean") {
+            autoJumpEnabled = settings.enabled;
+            document.getElementById("autoJumpSwitch").classList.toggle("active", settings.enabled);
+        }
+
+        if (settings.url) {
+            const dropdownItems = document.querySelectorAll("#pageDropdown .dropdown-item");
+            let matched = false;
+
+            dropdownItems.forEach(item => {
+                if (item.dataset.value === settings.url) {
+                    item.classList.add("active");
+                    matched = true;
+                } else {
+                    item.classList.remove("active");
+                }
+            });
+
+            if (matched) {
+                document.getElementById("targetUrlDisplay").textContent = settings.url;
+                document.getElementById("customUrlRow").classList.add("hidden");
+            } else {
+                document.getElementById("targetUrlDisplay").textContent = "自定义网址";
+                document.getElementById("customUrlRow").classList.remove("hidden");
+                document.getElementById("customUrlInput").value = settings.url || "";
+            }
+        }
+    }
+
+    // ========== 倒计时控制 ==========
+    function startCountdownIfEnabled() {
+        const settings = loadSettings();
+        if (!settings || !settings.url || !settings.enabled) return;
+
+        totalSeconds = settings.delay || 5;
+        currentCountdown = totalSeconds;
+        updateCountdownDisplay();
+
+        countdownTimer = setInterval(() => {
+            currentCountdown--;
+            updateCountdownDisplay();
+
+            if (currentCountdown <= 0) {
+                clearInterval(countdownTimer);
+                window.location.href = settings.url;
+            }
+        }, 1000);
+    }
+
+    function updateCountdownDisplay() {
+        document.getElementById("countdownNum").textContent = Math.max(0, currentCountdown);
+        const progress = Math.max(0, currentCountdown / totalSeconds);
+        document.getElementById("progressFill").style.width = (progress * 100) + "%";
+    }
+
+    function cancelJump() {
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        showToast("已取消跳转");
+    }
+
+    function jumpNow() {
+        const settings = loadSettings();
+        if (settings?.url) {
+            window.location.href = settings.url;
+        }
+    }
+
+    // ========== 提示 ==========
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+</script>
+
+</body>
+</html>
